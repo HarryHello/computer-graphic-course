@@ -1,1 +1,60 @@
+# ===== macOS =====
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ===== ZCode =====
+.zcodeignore
+
+# ===== 构建目录（CMake / 通用）=====
+build/
+build-*/
+out/
+cmake-build-*/
+
+# ===== CMake 生成文件 =====
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt.user
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+Makefile
+
+# ===== 编译产物 =====
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.dSYM/
+
+# ===== Xcode（CMake 生成 Xcode 工程时）=====
+*.xcodeproj
+xcuserdata/
+DerivedData/
+
+# ===== IDE / 编辑器 =====
+.idea/
+.vscode/
+.vs/
+*.swp
+*~
+
+# ===== Python（辅助脚本用）=====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ===== 日志与临时文件 =====
+*.log
+*.tmp
