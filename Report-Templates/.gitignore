@@ -3,6 +3,7 @@ images/**
 !images/sysu.png
 /*.typ
 !/usage.typ
+!/info.example.typ
 
 # Visual Studio Code
 .vscode/

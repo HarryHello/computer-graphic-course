@@ -1,0 +1,6 @@
+// stb_image / stb_image_write 的唯一实现翻译单元
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>

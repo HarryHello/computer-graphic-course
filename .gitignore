@@ -58,3 +58,9 @@ venv/
 # ===== 日志与临时文件 =====
 *.log
 *.tmp
+
+# ===== 课程报告：个人信息与编译产物 =====
+Report-Templates/info.typ
+0000/report/*.pdf
+# 含真实学号的截图，不入库（可随时用 scripts/capture.sh 重新生成）
+0000/report/images/
