@@ -13,13 +13,12 @@ project(CGAssignment1 VERSION "1.0")
 # C++ 11 is required
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
-
 ############################################################
-# Windows or Linux options
+# Windows / Linux / macOS options
 ############################################################
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	link_directories(${PROJECT_SOURCE_DIR}/libs)
+	include_directories(${PROJECT_SOURCE_DIR}/include)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	find_package(SDL2 REQUIRED)
 
@@ -29,6 +28,23 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	else()
 	    message (FATAL_ERROR "Cannot find SDL2")
 	endif()
+	include_directories(${PROJECT_SOURCE_DIR}/include)
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+	# macOS: SDL2 via Homebrew（cmake -DCMAKE_PREFIX_PATH=/opt/homebrew ..）
+	find_package(SDL2 REQUIRED)
+
+	if(SDL2_FOUND)
+	    message ("SDL2 found")
+	else()
+	    message (FATAL_ERROR "Cannot find SDL2")
+	endif()
+
+	# 框架自带的 include/SDL2 是老版 Windows 头文件，在 macOS 新编译器下编不过；
+	# 把 Homebrew 的 SDL2 头文件目录放到搜索顺序最前，glm / tiny_obj_loader 仍用自带版本
+	get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+	set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES
+		${SDL2_INCLUDE_DIRS}
+		${PROJECT_SOURCE_DIR}/include)
 ENDIF()
 
 ############################################################
@@ -54,9 +70,22 @@ aux_source_directory(./src/ DIR_SRCS)
 # Add an executable with the above sources
 add_executable(${PROJECT_NAME} ${DIR_SRCS} ${HEADERS})
 
+# macOS 下 SDL2 头文件需以 -I（而非 -isystem）参与搜索，才能压过自带的老版头文件
+IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+	set_target_properties(${PROJECT_NAME} PROPERTIES NO_SYSTEM_FROM_IMPORTED TRUE)
+ENDIF()
+
 # link the target with the SDL2
-target_link_libraries( ${PROJECT_NAME} 
-    PRIVATE 
-        SDL2
-	SDL2main
-)
+IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+	target_link_libraries( ${PROJECT_NAME}
+	    PRIVATE
+	        SDL2::SDL2
+		SDL2::SDL2main
+	)
+ELSE()
+	target_link_libraries( ${PROJECT_NAME}
+	    PRIVATE
+	        SDL2
+		SDL2main
+	)
+ENDIF()

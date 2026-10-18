@@ -195,8 +195,21 @@ namespace TinyRenderer
 		//Setup view matrix (world space -> camera space)
 		glm::mat4 vMat = glm::mat4(1.0f);
 
-		//mplement the calculation of view matrix, and then set it to vMat
-		//  Note: You can use any glm function (such as glm::normalize, glm::cross, glm::dot) except glm::lookAt
+		// 相机局部坐标系：z 轴指向相机后方（camera - target 方向），再由 worldUp 叉乘出 x/y 轴
+		glm::vec3 zAxis = glm::normalize(camera - target);
+		glm::vec3 xAxis = glm::normalize(glm::cross(worldUp, zAxis));
+		glm::vec3 yAxis = glm::normalize(glm::cross(zAxis, xAxis));
+
+		// 旋转部分：矩阵的三行分别是相机基向量 x/y/z（把世界向量变换到相机坐标系）
+		// 平移部分：相机位置在三个基向量上的投影取负，存于第 3 列
+		// glm::mat4 列主序：vMat[col][row] 为第 col 列第 row 行（与 glm::lookAt 源码一致）
+		vMat[0][0] = xAxis.x; vMat[1][0] = xAxis.y; vMat[2][0] = xAxis.z;
+		vMat[0][1] = yAxis.x; vMat[1][1] = yAxis.y; vMat[2][1] = yAxis.z;
+		vMat[0][2] = zAxis.x; vMat[1][2] = zAxis.y; vMat[2][2] = zAxis.z;
+		vMat[3][0] = -glm::dot(xAxis, camera);
+		vMat[3][1] = -glm::dot(yAxis, camera);
+		vMat[3][2] = -glm::dot(zAxis, camera);
+		vMat[3][3] = 1.0f;
 
 		return vMat;
 	}
@@ -204,11 +217,17 @@ namespace TinyRenderer
 	glm::mat4 TRRenderer::calcPerspProjectMatrix(float fovy, float aspect, float near, float far)
 	{
 		//Setup perspective matrix (camera space -> clip space)
-		glm::mat4 pMat = glm::mat4(1.0f);
+		glm::mat4 pMat = glm::mat4(0.0f);
 
-		//Implement the calculation of perspective matrix, and then set it to pMat
-		//  Note: You can use any math function (such as std::tan) except glm::perspective
+		// 视锥体上平面半高 t = near * tan(fovy/2)，右平面半宽 r = t * aspect
+		// 透视投影：x/y 除以 -z 实现近大远小，z 映射到 [-1,1]，w = -z（供透视除法）
+		float tanHalfFovy = std::tan(glm::radians(fovy) / 2.0f);
 
+		pMat[0][0] = 1.0f / (aspect * tanHalfFovy);
+		pMat[1][1] = 1.0f / tanHalfFovy;
+		pMat[2][2] = -(far + near) / (far - near);
+		pMat[2][3] = -1.0f;
+		pMat[3][2] = -(2.0f * near * far) / (far - near);
 
 		return pMat;
 	}
@@ -218,8 +237,14 @@ namespace TinyRenderer
 		//Setup viewport matrix (ndc space -> screen space)
 		glm::mat4 vpMat = glm::mat4(1.0f);
 
-		//Implement the calculation of viewport matrix, and then set it to vpMat
-
+		// x_screen = (x_ndc + 1) / 2 * width
+		// y_screen = (1 - y_ndc) / 2 * height（帧缓冲第 0 行是窗口顶部，故 y 翻转）
+		vpMat[0][0] = width / 2.0f;
+		vpMat[1][1] = -height / 2.0f;
+		vpMat[2][2] = 1.0f;
+		vpMat[3][0] = width / 2.0f;
+		vpMat[3][1] = height / 2.0f;
+		vpMat[3][3] = 1.0f;
 
 		return vpMat;
 	}
@@ -227,10 +252,17 @@ namespace TinyRenderer
 	glm::mat4 TRRenderer::calcOrthoProjectMatrix(float left, float right, float bottom, float top, float near, float far)
 	{
 		//Setup orthogonal matrix (camera space -> homogeneous space)
-		glm::mat4 pMat = glm::mat4(1.0f);
+		glm::mat4 pMat = glm::mat4(0.0f);
 
-		//Implement the calculation of orthogonal projection, and then set it to pMat
-		
+		// 正交投影：视锥体为长方体，xyz 分别线性映射到 [-1,1]，无透视除法的近大远小效果
+		pMat[0][0] = 2.0f / (right - left);
+		pMat[1][1] = 2.0f / (top - bottom);
+		pMat[2][2] = -2.0f / (far - near);
+		pMat[3][3] = 1.0f;
+		pMat[3][0] = -(right + left) / (right - left);
+		pMat[3][1] = -(top + bottom) / (top - bottom);
+		pMat[3][2] = -(far + near) / (far - near);
+
 		return pMat;
 	}
 
