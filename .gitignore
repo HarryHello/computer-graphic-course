@@ -61,6 +61,7 @@ venv/
 
 # ===== 课程报告：个人信息与编译产物 =====
 Report-Templates/info.typ
-0000/report/*.pdf
+# 所有 PDF 一律不入库：报告 PDF 含学号，作业原文已整理进 docs/REQUEST.md，均可本地再生
+*.pdf
 # 含真实学号的截图，不入库（可随时用 scripts/capture.sh 重新生成）
 0000/report/images/
