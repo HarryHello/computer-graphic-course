@@ -9,10 +9,6 @@
   members: (
     (name: "张三", stdid: "22223333"),
     (name: "李四", stdid: "22223334"),
-    (name: "", stdid: ""),
-    (name: "", stdid: ""),
-    (name: "", stdid: ""),
-    (name: "", stdid: ""),
   ),
   time: "2022~2023 学年第二学期",
   banner: "../images/sysu.png",

@@ -50,16 +50,17 @@
       fieldname(text("院") + h(2em) + text("系：") + h(1em)), fieldvalue(school),
     )
 
-    // 小组成员名单：第一列为标签，其余各列为组员姓名/学号（members 由 info.typ 提供）
+    // 成员名单：第一列为标签，其余各列为成员姓名/学号（members 由 info.typ 提供）
+    // 列宽取内容自适应：1 人为个人报告的紧凑小表，多人为小组表格，均整体居中
     #if members.len() > 0 {
       v(28pt)
-      table(
-        columns: (auto,) + (1fr,) * members.len(),
+      align(center, table(
+        columns: (auto,) + (auto,) * members.len(),
         align: center + horizon,
-        inset: (x: 6pt, y: 8pt),
+        inset: (x: 14pt, y: 8pt),
         [*姓 名*], ..members.map(m => m.name),
         [*学 号*], ..members.map(m => m.stdid),
-      )
+      ))
     }
 
     #v(28pt)
