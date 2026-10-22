@@ -71,10 +71,15 @@
 
 ```
 0001/
-├── CMakeLists.txt      # 课程框架原始构建脚本（Windows 走 libs/，Linux 找系统 SDL2）
-├── docs/               # 本需求文档 + 作业原文 + 框架部署说明
+├── CMakeLists.txt      # 构建脚本（Windows 走 libs/，Linux/macOS 找系统 SDL2）
+├── docs/               # 本需求文档
 ├── model/              # 渲染用的 obj 模型（代码以相对路径 model/ 加载，需从 0001/ 目录运行）
-├── include/ libs/      # 框架自带第三方库（SDL2/Windows 头文件与 .lib、GLM、tiny_obj_loader）
-├── src/                # 渲染器源码（待修改：TRRenderer.cpp、main.cpp）
-└── build/              # Windows 运行库 SDL2.dll（git 忽略；按课程要求提交时需清空）
+├── include/
+│   ├── TinyRenderer/   # 项目头文件（TRRenderer / TRShaderPipeline / TRFrameBuffer / TRDrawableMesh / TRWindowsApp）
+│   ├── SDL2/ glm/      # 框架自带第三方库头文件（SDL2 为 Windows 版，macOS 用 Homebrew 版）
+│   └── tiny_obj_loader.h
+├── libs/               # Windows 用 SDL2 .lib
+├── src/                # 项目源文件（.cpp；作业改动集中在 TRRenderer.cpp、main.cpp）
+├── report/             # 实验报告（typst 源 + 效果截图）
+└── build/              # 构建产物（git 忽略；按课程要求提交时需清空）
 ```

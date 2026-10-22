@@ -1,4 +1,4 @@
-#include "TRDrawableMesh.h"
+#include "TinyRenderer/TRDrawableMesh.h"
 
 #include <iostream>
 
@@ -16,6 +16,7 @@ namespace TinyRenderer
 
 	void TRDrawableMesh::loadMeshFromFile(const std::string &filename)
 	{
+		//Only the first three vertices of each face are kept, so non-triangle faces are truncated
 		unload();
 
 		tinyobj::ObjReaderConfig reader_config;

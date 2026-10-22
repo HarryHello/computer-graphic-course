@@ -1,4 +1,4 @@
-#include "TRWindowsApp.h"
+#include "TinyRenderer/TRWindowsApp.h"
 
 #include <iostream>
 

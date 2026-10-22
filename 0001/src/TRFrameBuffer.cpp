@@ -1,4 +1,4 @@
-#include "TRFrameBuffer.h"
+#include "TinyRenderer/TRFrameBuffer.h"
 
 #include <cmath>
 namespace TinyRenderer

@@ -8,6 +8,7 @@
 
 namespace TinyRenderer
 {
+	// Parallel arrays, indexed by TRMeshFace
 	class TRVertexAttrib final
 	{
 	public:
@@ -26,6 +27,7 @@ namespace TinyRenderer
 		}
 	};
 
+	// Indices into TRVertexAttrib, taken from the obj v / vn / vt triplets
 	class TRMeshFace final
 	{
 	public:
@@ -34,6 +36,7 @@ namespace TinyRenderer
 		unsigned int vtexIndex[3];
 	};
 
+	// Loaded from an obj file with tinyobjloader
 	class TRDrawableMesh final
 	{
 	public:

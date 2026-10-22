@@ -7,6 +7,7 @@
 #include "glm/vec4.hpp"
 namespace TinyRenderer
 {
+	// Pixels are stored row by row, row 0 at the top of the window (the viewport matrix flips y to match).
 	class TRFrameBuffer final
 	{
 	public:

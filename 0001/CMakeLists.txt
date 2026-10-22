@@ -22,7 +22,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	find_package(SDL2 REQUIRED)
 
-	# check if boost was found
+	# check if SDL2 was found
 	if(SDL2_FOUND)
 	    message ("SDL2 found")
 	else()
@@ -30,7 +30,7 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	endif()
 	include_directories(${PROJECT_SOURCE_DIR}/include)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-	# macOS: SDL2 via Homebrew（cmake -DCMAKE_PREFIX_PATH=/opt/homebrew ..）
+	# macOS: SDL2 via Homebrew (cmake -DCMAKE_PREFIX_PATH=/opt/homebrew ..)
 	find_package(SDL2 REQUIRED)
 
 	if(SDL2_FOUND)
@@ -39,8 +39,8 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	    message (FATAL_ERROR "Cannot find SDL2")
 	endif()
 
-	# 框架自带的 include/SDL2 是老版 Windows 头文件，在 macOS 新编译器下编不过；
-	# 把 Homebrew 的 SDL2 头文件目录放到搜索顺序最前，glm / tiny_obj_loader 仍用自带版本
+	# The bundled include/SDL2 holds old Windows headers that do not compile with recent macOS toolchains;
+	# put the Homebrew SDL2 include dir first in the search order, while glm / tiny_obj_loader still come from include/
 	get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
 	set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES
 		${SDL2_INCLUDE_DIRS}
@@ -63,20 +63,18 @@ ENDIF()
 # Create an executable
 ############################################################
 
-file(GLOB_RECURSE HEADERS ./src/*.h)
-source_group("Header Files" FILES ${HEADERS})
+# Project headers in include/TinyRenderer/, implementations in src/
+file(GLOB PROJECT_HEADERS ./include/TinyRenderer/*.h)
+source_group("Header Files" FILES ${PROJECT_HEADERS})
 aux_source_directory(./src/ DIR_SRCS)
 
 # Add an executable with the above sources
-add_executable(${PROJECT_NAME} ${DIR_SRCS} ${HEADERS})
+add_executable(${PROJECT_NAME} ${DIR_SRCS} ${PROJECT_HEADERS})
 
-# macOS 下 SDL2 头文件需以 -I（而非 -isystem）参与搜索，才能压过自带的老版头文件
+# Link SDL2. On macOS the imported targets' headers must be searched via -I (not -isystem)
+# to take precedence over the bundled old headers
 IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	set_target_properties(${PROJECT_NAME} PROPERTIES NO_SYSTEM_FROM_IMPORTED TRUE)
-ENDIF()
-
-# link the target with the SDL2
-IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	target_link_libraries( ${PROJECT_NAME}
 	    PRIVATE
 	        SDL2::SDL2

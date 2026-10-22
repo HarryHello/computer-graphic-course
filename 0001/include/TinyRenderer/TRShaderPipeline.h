@@ -67,6 +67,7 @@ namespace TinyRenderer
 
 	};
 
+	// The fragment shader outputs the texture coordinate as color, which is why the wireframe shows a uv gradient.
 	class TRDefaultShaderPipeline final : public TRShaderPipeline
 	{
 	public:

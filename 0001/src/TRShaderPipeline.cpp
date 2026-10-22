@@ -1,4 +1,4 @@
-#include "TRShaderPipeline.h"
+#include "TinyRenderer/TRShaderPipeline.h"
 namespace TinyRenderer
 {
 
@@ -74,6 +74,7 @@ namespace TinyRenderer
 		const unsigned int &screen_width,
 		const unsigned int &screen_height)
 	{
+		//Filled rasterization is not used: this assignment renders in wireframe through rasterize_wire
 		return {};
 	}
 

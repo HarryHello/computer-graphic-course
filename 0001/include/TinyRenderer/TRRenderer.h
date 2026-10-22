@@ -11,6 +11,7 @@
 
 namespace TinyRenderer
 {
+	// Owns the MVP matrices, the shader pipeline and the double-buffered frames, and drives the per-triangle pipeline.
 	class TRRenderer final
 	{
 	public:
@@ -35,11 +36,15 @@ namespace TinyRenderer
 
 		unsigned char* commitRenderedColorBuffer();
 
-		//Auxiliary function
-		static glm::mat4 calcViewPortMatrix(int width, int height);
+		//Transformation matrices for this assignment: element-wise, no glm::lookAt / perspective / ortho
+		//View matrix: world space -> camera space
 		static glm::mat4 calcViewMatrix(glm::vec3 camera, glm::vec3 target, glm::vec3 worldUp);
+		//Perspective projection matrix: camera space -> clip space
 		static glm::mat4 calcPerspProjectMatrix(float fovy, float aspect, float near, float far);
+		//Orthographic projection matrix: camera space -> clip space (challenge task)
 		static glm::mat4 calcOrthoProjectMatrix(float left, float right, float bottom, float top, float near, float far);
+		//Viewport matrix: NDC -> screen space
+		static glm::mat4 calcViewPortMatrix(int width, int height);
 
 	private:
 		bool isTowardBackFace(const glm::vec4 &v0, const glm::vec4 &v1, const glm::vec4 &v2) const;

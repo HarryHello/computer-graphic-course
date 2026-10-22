@@ -18,13 +18,19 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.*/
+	THE SOFTWARE.*/
 
+// Code changes for this assignment (3D Transformation):
+//   Basic task:     element-wise implementation of calcViewMatrix / calcPerspProjectMatrix /
+//                   calcViewPortMatrix (see src/TRRenderer.cpp);
+//   Improvement:    the scale up/down animation in the Model transformation block below;
+//   Challenge task: switch between perspective and orthographic projection at
+//                   "try it with different kind of projection" below.
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-#include "TRWindowsApp.h"
-#include "TRRenderer.h"
+#include "TinyRenderer/TRWindowsApp.h"
+#include "TinyRenderer/TRRenderer.h"
 
 using namespace TinyRenderer;
 
@@ -79,7 +85,7 @@ int main(int argc, char* args[])
 		{
 			static glm::mat4 model_mat = glm::mat4(1.0f);
 
-			//Rotation（提升任务要求注释掉旋转，改用缩放动画）
+			//Rotation (commented out as required by the improvement task; replaced by the scale animation)
 			//{
 			//	model_mat = glm::rotate(model_mat, (float)deltaTime * 0.0001f, glm::vec3(0, 1, 0));
 			//}
@@ -87,7 +93,7 @@ int main(int argc, char* args[])
 			//Scale
 			{
 				//Improvement: Implement the scale up and down animation using glm::scale function
-				//相位随时间推进，缩放因子 = 2 - cos(phase) 在 [1, 3] 之间循环：放大到 3 倍再缩回原大
+				//2 - cos(phase) cycles within [1, 3]: the model grows to 3x, then shrinks back to 1x
 				static float scalePhase = 0.0f;
 				scalePhase += (float)deltaTime * 0.0015f;
 				float scaleFactor = 2.0f - glm::cos(scalePhase);
