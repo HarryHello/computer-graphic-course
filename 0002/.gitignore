@@ -1,0 +1,5 @@
+# Wavefront model assets use the same extension as compiled objects.
+!/model/*.obj
+
+# Local submission archives include student information.
+/report/*+HW2.zip
