@@ -33,6 +33,8 @@ typst compile midterm/report/REPORT.typ midterm/report/REPORT.pdf
 
 优先在一台有 NVIDIA GPU 的机器上运行作者提供的预训练模型，保存几个时刻和视角的可视化截图，与论文中对应场景比较，再分析运动轨迹和局限。其他成员可基于论文、运行记录和截图参与分析。完整训练、定量评估及额外消融的范围由小组根据环境与时间决定。
 
+PC 环境检查、预训练模型下载、单场景可视化和新对话交接步骤见[复现指南](REPRODUCTION.md)。
+
 作者提供的 [预训练模型压缩包](https://omnomnom.vision.rwth-aachen.de/data/Dynamic3DGaussians/output.zip) 约 10.8 GiB，未纳入本仓库。训练数据可从[作者仓库](vendor/Dynamic3DGaussians/README.md)获取。下载后按作者说明解压到代码目录，避免将数据、模型和生成文件提交到课程仓库。
 
 环境、编译 CUDA 光栅化扩展及运行命令见[作者的安装与运行说明](vendor/Dynamic3DGaussians/README.md#installation)。作者另外维护 [diff-gaussian-rasterization-w-depth](https://github.com/JonathonLuiten/diff-gaussian-rasterization-w-depth) 依赖，运行时需单独安装。当前机器环境和 RTX 4070 Ti SUPER 的兼容性尚未验证。
