@@ -10,8 +10,8 @@ namespace Inkshift
         [SerializeField] GameFlow flow;
         [SerializeField] ZoneKind kind;
         [SerializeField] int checkpointOrder;
-        [SerializeField] Transform spawn;
-        [SerializeField] bool spawnAsBall;
+        [SerializeField, Tooltip("Respawn point. Its forward axis follows the next section of the route.")]
+        Transform spawn;
         [SerializeField] MeshRenderer indicator;
         [SerializeField] Material activeMaterial;
         [SerializeField] string title;
@@ -20,7 +20,6 @@ namespace Inkshift
         public ZoneKind Kind => kind;
         public int Order => checkpointOrder;
         public Transform Spawn => spawn;
-        public bool SpawnAsBall => spawnAsBall;
         public string Title => title;
         public string Message => message;
 

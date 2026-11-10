@@ -625,7 +625,6 @@ MonoBehaviour:
   kind: 1
   checkpointOrder: 1
   spawn: {fileID: 1801044509}
-  spawnAsBall: 1
   indicator: {fileID: 1068753429}
   activeMaterial: {fileID: 2100000, guid: f0eb9054405984b83bae0865c7b6a7fb, type: 2}
   title: 
@@ -7213,7 +7212,6 @@ MonoBehaviour:
   kind: 2
   checkpointOrder: 0
   spawn: {fileID: 0}
-  spawnAsBall: 0
   indicator: {fileID: 0}
   activeMaterial: {fileID: 0}
   title: 

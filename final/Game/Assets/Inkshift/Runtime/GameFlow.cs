@@ -41,7 +41,7 @@ namespace Inkshift
             player.Feedback += audioFeedback.Play;
             mode = Mode.Running;
             player.AllowInput(true);
-            PlaceAtStart();
+            PlaceAt(startPoint, startAsBall, inputDelay: 0.18f);
             hud.ShowStage(stageIndex, campaign.Count, campaign[stageIndex]);
             Hint("FIELD NOTES", campaign[stageIndex].Brief, 7f);
         }
@@ -191,15 +191,15 @@ namespace Inkshift
         {
             retries++;
             audioFeedback.Play(SoundCue.Fall);
-            PlaceAtStart();
-            Hint("BACK ON THE LINE", checkpoint ? "Checkpoint restored." : campaign[stageIndex].Brief, 3.6f);
+            Transform spawn = checkpoint ? checkpoint.Spawn : startPoint;
+            PlaceAt(spawn, player.IsBall);
+            Hint("BACK ON THE LINE", checkpoint ? "Checkpoint restored. Hold forward to continue." : campaign[stageIndex].Brief, 3.6f);
         }
 
-        void PlaceAtStart()
+        void PlaceAt(Transform spawn, bool ball, float inputDelay = 0f)
         {
-            Transform spawn = checkpoint ? checkpoint.Spawn : startPoint;
             int heading = Mathf.RoundToInt(spawn.eulerAngles.y / 90f) % 4;
-            player.Place(spawn.position, heading, checkpoint ? checkpoint.SpawnAsBall : startAsBall);
+            player.Place(spawn.position, heading, ball, inputDelay);
         }
 
         void Load(string sceneName)

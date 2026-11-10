@@ -3167,7 +3167,6 @@ MonoBehaviour:
   kind: 0
   checkpointOrder: 0
   spawn: {fileID: 0}
-  spawnAsBall: 0
   indicator: {fileID: 0}
   activeMaterial: {fileID: 0}
   title: EAST JUNCTION
@@ -6219,11 +6218,10 @@ MonoBehaviour:
   kind: 1
   checkpointOrder: 1
   spawn: {fileID: 1878711471}
-  spawnAsBall: 0
   indicator: {fileID: 1226433371}
   activeMaterial: {fileID: 2100000, guid: f0eb9054405984b83bae0865c7b6a7fb, type: 2}
   title: 
-  message: Turn left with Q to face north. The next landing is higher.
+  message: Follow the north arrow to the higher landing.
 --- !u!65 &1771709206
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6379,7 +6377,6 @@ MonoBehaviour:
   kind: 0
   checkpointOrder: 0
   spawn: {fileID: 0}
-  spawnAsBall: 0
   indicator: {fileID: 0}
   activeMaterial: {fileID: 0}
   title: WEST JUNCTION
@@ -6699,7 +6696,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1878711470}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.99999976, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
@@ -7763,7 +7760,6 @@ MonoBehaviour:
   kind: 2
   checkpointOrder: 0
   spawn: {fileID: 0}
-  spawnAsBall: 0
   indicator: {fileID: 0}
   activeMaterial: {fileID: 0}
   title: 

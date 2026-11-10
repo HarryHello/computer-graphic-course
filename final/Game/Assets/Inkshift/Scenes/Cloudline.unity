@@ -413,7 +413,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 51235302}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.99999976, y: 1, z: 0.99999976}
   m_ConstrainProportionsScale: 0
@@ -3613,11 +3613,10 @@ MonoBehaviour:
   kind: 1
   checkpointOrder: 1
   spawn: {fileID: 1158963898}
-  spawnAsBall: 0
   indicator: {fileID: 902033706}
   activeMaterial: {fileID: 2100000, guid: f0eb9054405984b83bae0865c7b6a7fb, type: 2}
   title: 
-  message: Face east with E and use the ball for the long launch.
+  message: Follow the east arrow and use the ball for the long launch.
 --- !u!65 &855812484
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4893,7 +4892,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1158963897}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -5226,11 +5225,10 @@ MonoBehaviour:
   kind: 1
   checkpointOrder: 2
   spawn: {fileID: 51235303}
-  spawnAsBall: 0
   indicator: {fileID: 2041561482}
   activeMaterial: {fileID: 2100000, guid: f0eb9054405984b83bae0865c7b6a7fb, type: 2}
   title: 
-  message: Turn north with Q. Take the three rising landings one at a time.
+  message: Follow the north arrow and take the three rising landings one at a time.
 --- !u!65 &1226433372
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10462,7 +10460,6 @@ MonoBehaviour:
   kind: 2
   checkpointOrder: 0
   spawn: {fileID: 0}
-  spawnAsBall: 0
   indicator: {fileID: 0}
   activeMaterial: {fileID: 0}
   title: 

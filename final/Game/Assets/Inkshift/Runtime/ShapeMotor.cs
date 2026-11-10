@@ -76,7 +76,7 @@ namespace Inkshift
             switchQueued = false;
         }
 
-        public void Place(Vector3 feet, int heading, bool ball)
+        public void Place(Vector3 feet, int heading, bool ball, float inputDelay)
         {
             body.position = feet + Vector3.up * (Radius + 0.045f);
             body.linearVelocity = Vector3.zero;
@@ -94,7 +94,7 @@ namespace Inkshift
             cutJump = false;
             lastGrounded = float.NegativeInfinity;
             groundLockUntil = 0f;
-            inputLockUntil = Time.time + 0.18f;
+            inputLockUntil = Time.time + inputDelay;
             AllowInput(controlsEnabled);
             view.Snap(heading, body.position);
             MovementDirection = view.ControlRotation * Vector3.forward;
