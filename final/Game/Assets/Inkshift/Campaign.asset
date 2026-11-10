@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b412c48eb431d48e4b3406506a983a5b, type: 3}
+  m_Name: Campaign
+  m_EditorClassIdentifier: Assembly-CSharp::Inkshift.Campaign
+  menuScene: InkshiftTitle
+  stages:
+  - Id: first-marks
+    Scene: FirstMarks
+    Title: First Marks
+    Focus: CUBE STEPS   /   DOUBLE JUMP
+    Brief: Tap W to flip one cube length. Hold W to link steps. Press Tab to roll
+      as a ball.
+  - Id: slipstream
+    Scene: Slipstream
+    Title: Slipstream
+    Focus: BALL SPEED   /   RAMP FLIGHT
+    Brief: Hold W through the dip to build ball speed. Aim for the orange launch
+      stripes.
+  - Id: quarter-turn
+    Scene: QuarterTurn
+    Title: Quarter Turn
+    Focus: CAMERA TURNS   /   OFFSET LANDINGS
+    Brief: Follow the blue arrows. Press E for a right turn and Q for a left turn,
+      then keep moving with W.
+  - Id: cloudline
+    Scene: Cloudline
+    Title: The Cloudline
+    Focus: FULL ROUTE   /   HIGH LANDINGS
+    Brief: Cross the beam, take the ramp, then climb the steps. Switch shape when
+      the route changes.

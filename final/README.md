@@ -1,24 +1,30 @@
-# 期末项目
+# Inkshift
 
-## 选题决定
+小组选择 **第 7 题：游戏建模和动画**，用 Unity 制作单人 3D 平台跳跃游戏。玩家在云上的四条路线中切换立方体和球体，跨越平台并留下颜料。
 
-小组已选择 **第 7 题：游戏建模和动画**，使用 Unity 开发单人 3D 平台跳跃游戏。
+## 试玩
 
-目前确定的方向：角色可在按边长翻滚、易控制的立方体和惯性较大、可连续滚动的球体之间切换，具备二段跳；经过的表面留下仅用于视觉表现的颜料。场景为悬浮平台与云层，采用俯视角第三人称镜头，视角可按四个方向切换。具体关卡和参数仍需通过原型验证。
+用 Unity **6000.3.28f1** 打开 [Game](Game/)，在 Project 窗口打开 [InkshiftTitle.unity](Game/Assets/Inkshift/Scenes/InkshiftTitle.unity)，点击 Play，再选择 **Start Run**。通关后可前往下一关，或返回标题页选择已经解锁的关卡。
 
-具体约定和待验证的问题见[游戏设计记录](DESIGN.md)。
+| 按键 | 操作 |
+| --- | --- |
+| WASD 或方向键 | 按当前视角移动 |
+| Tab | 切换球体与立方体 |
+| 空格 | 跳跃，空中可再按一次 |
+| Q / E | 左转或右转镜头 90° |
+| R | 回到最近检查点 |
+| Esc | 暂停或继续 |
 
-## 项目环境
+每关记录最快通关用时，保存在本机。暂停菜单中的 **Restart Route** 会重开整关。
 
-- Unity 项目位于 [`Game/`](Game/)，使用 Unity **6000.3.28f1** 和 Universal Render Pipeline（URP）。
-- 目标平台为 macOS 和 Windows；尚未完成构建验证。
-- 项目处于初始化阶段，玩法和课程要求的自实现光照、阴影尚未完成。
+## 项目结构
 
-## 灰盒试玩
+- [游戏设计](DESIGN.md)记录移动规则、关卡节奏和视觉约定。
+- [Scenes](Game/Assets/Inkshift/Scenes/)包含标题和四个关卡。可以直接打开任一关卡进入 Play 模式调试。
+- [Campaign.asset](Game/Assets/Inkshift/Campaign.asset)定义关卡顺序、场景名和简介。[Player.prefab](Game/Assets/Inkshift/Player.prefab)包含共享的玩家控制参数。各场景的 **Route Markers** 保存检查点、提示区和终点。
+- 构建时使用 Unity 的 **File → Build Profiles**，目标为 macOS 和 Windows。标题场景在场景列表第一位。
 
-在 Unity 中打开 `Assets/Scenes/Prototype.unity`，点击 Play：WASD 或方向键移动，Tab 切换球体和立方体，空格跳跃（可二段跳），Q / E 将镜头旋转 90°。掉出场景会回到起点。
-
-这是用于测试手感的初版：立方体翻滚、切换惯性、碰撞和跳跃参数仍需试玩调整；颜料、云层、完整关卡和自实现光影尚未实现。当前使用 Unity 默认光照与阴影。
+当前版本使用 Unity URP 光照和阴影。课程要求中的自实现 Phong 光照、阴影、Phong / Gouraud 着色模式及模型导入与网格查看留待后续完成。
 
 ## 题目要求
 

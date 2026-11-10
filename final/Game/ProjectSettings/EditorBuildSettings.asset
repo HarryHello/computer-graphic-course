@@ -6,8 +6,20 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Prototype.unity
-    guid: cb33f5ff09a154adf90633371041926c
+    path: Assets/Inkshift/Scenes/InkshiftTitle.unity
+    guid: 31cc1c15261244922aea334f111f0b9f
+  - enabled: 1
+    path: Assets/Inkshift/Scenes/FirstMarks.unity
+    guid: 109db9e67abb54f38aa8c16bf1efa114
+  - enabled: 1
+    path: Assets/Inkshift/Scenes/Slipstream.unity
+    guid: d6b7cd6371b6b4b41b2da10c57ce757d
+  - enabled: 1
+    path: Assets/Inkshift/Scenes/QuarterTurn.unity
+    guid: 0bbd341ed47e745578d024e32c9692a6
+  - enabled: 1
+    path: Assets/Inkshift/Scenes/Cloudline.unity
+    guid: 854b22e903d764fb69a31a3407be6bcd
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

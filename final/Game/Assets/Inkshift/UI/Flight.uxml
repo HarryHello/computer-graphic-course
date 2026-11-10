@@ -1,0 +1,61 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="Flight.uss" />
+    <ui:VisualElement class="flight" picking-mode="Ignore">
+        <ui:VisualElement name="titleScreen" class="screen title-screen off">
+            <ui:VisualElement class="title-panel">
+                <ui:Label text="THE CLOUD ROUTES" class="eyebrow" />
+                <ui:Label text="INKSHIFT" class="hero" />
+                <ui:Label text="Leave your mark above the clouds." class="tagline" />
+                <ui:VisualElement class="ink-rule" />
+                <ui:VisualElement class="title-actions">
+                    <ui:Button name="playButton" text="START RUN" class="action primary" />
+                    <ui:Button name="stagesButton" text="SELECT ROUTE" class="action" />
+                    <ui:Button name="quitButton" text="EXIT GAME" class="action" />
+                </ui:VisualElement>
+                <ui:Label text="WASD / ARROWS  Move    •    TAB  Change shape" class="controls" />
+                <ui:Label text="SPACE  Jump twice    •    Q / E  Turn view" class="controls" />
+            </ui:VisualElement>
+            <ui:Label name="titleProgress" class="title-stamp" />
+        </ui:VisualElement>
+        <ui:VisualElement name="stageScreen" class="screen centered off">
+            <ui:VisualElement class="card">
+                <ui:Label text="THE CLOUD ROUTES" class="eyebrow" />
+                <ui:Label text="Select a route" class="section-title" />
+                <ui:VisualElement name="stageList" class="stage-list" />
+                <ui:Button name="backButton" text="BACK TO TITLE" class="action" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="stageHud" class="screen off" picking-mode="Ignore">
+            <ui:VisualElement class="flight-card hud-left" picking-mode="Ignore">
+                <ui:Label name="routeId" class="eyebrow" picking-mode="Ignore" />
+                <ui:Label name="routeName" class="route-name" picking-mode="Ignore" />
+                <ui:VisualElement class="meter-row" picking-mode="Ignore">
+                    <ui:Label name="form" class="form" picking-mode="Ignore" />
+                    <ui:Label name="jumpPips" class="jump-pips" picking-mode="Ignore" />
+                    <ui:Label name="compass" class="compass" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="flight-card hud-right" picking-mode="Ignore">
+                <ui:Label name="timer" text="00:00.0" class="timer" picking-mode="Ignore" />
+                <ui:Label name="retryCount" class="caption" picking-mode="Ignore" />
+                <ui:Button name="pauseButton" text="ESC / PAUSE" class="action pause-button" />
+            </ui:VisualElement>
+            <ui:VisualElement name="hint" class="flight-card hint off" picking-mode="Ignore">
+                <ui:Label name="hintTitle" class="eyebrow" picking-mode="Ignore" />
+                <ui:Label name="hintBody" class="hint-body" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label name="checkpoint" class="flight-card checkpoint" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="dialog" class="screen centered off">
+            <ui:VisualElement class="card">
+                <ui:Label name="dialogEyebrow" class="eyebrow" />
+                <ui:Label name="dialogTitle" class="section-title" />
+                <ui:Label name="dialogText" class="hint-body" />
+                <ui:VisualElement name="dialogActions" class="dialog-actions" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="loading" class="screen centered off">
+            <ui:Label text="CHARTING ROUTE…" class="loading-mark" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
