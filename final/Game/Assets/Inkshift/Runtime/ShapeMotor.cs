@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 
 namespace Inkshift
 {
@@ -21,6 +22,7 @@ namespace Inkshift
         const float CoyoteTime = 0.11f;
         const float BufferTime = 0.14f;
         const float GroundStick = 1.4f;
+        const float CubeCornerRadius = 0.14f;
 
         Rigidbody body;
         Vector2 move;
@@ -35,6 +37,7 @@ namespace Inkshift
         int jumpsUsed;
 
         bool flipping;
+        bool flipReturning;
         float flipElapsed;
         Vector3 flipStart;
         Vector3 flipDirection;
@@ -47,7 +50,10 @@ namespace Inkshift
         public Vector3 Velocity => body.linearVelocity;
         public Vector3 GroundPoint { get; private set; }
         public Vector3 GroundNormal { get; private set; } = Vector3.up;
+        public Collider GroundSurface { get; private set; }
+        public Vector3 MovementDirection { get; private set; } = Vector3.forward;
         public event Action<SoundCue> Feedback;
+        public event Action Relocated;
 
         void Awake()
         {
@@ -82,6 +88,7 @@ namespace Inkshift
             sphere.localRotation = Quaternion.identity;
             SetShape(ball);
             Grounded = false;
+            GroundSurface = null;
             jumpsUsed = 0;
             cutJump = false;
             lastGrounded = float.NegativeInfinity;
@@ -89,6 +96,8 @@ namespace Inkshift
             inputLockUntil = Time.time + 0.18f;
             AllowInput(controlsEnabled);
             view.Snap(heading, body.position);
+            MovementDirection = view.ControlRotation * Vector3.forward;
+            Relocated?.Invoke();
         }
 
         void Update()
@@ -100,8 +109,8 @@ namespace Inkshift
             if (keys == null)
                 return;
 
-            move.x = Axis(keys.dKey.isPressed || keys.rightArrowKey.isPressed, keys.aKey.isPressed || keys.leftArrowKey.isPressed);
-            move.y = Axis(keys.wKey.isPressed || keys.upArrowKey.isPressed, keys.sKey.isPressed || keys.downArrowKey.isPressed);
+            move.x = ReadAxis(keys.dKey, keys.rightArrowKey, keys.aKey, keys.leftArrowKey, move.x);
+            move.y = ReadAxis(keys.wKey, keys.upArrowKey, keys.sKey, keys.downArrowKey, move.y);
             jumpHeld = keys.spaceKey.isPressed;
             if (keys.spaceKey.wasPressedThisFrame)
                 jumpDeadline = Time.time + BufferTime;
@@ -114,6 +123,19 @@ namespace Inkshift
         }
 
         static int Axis(bool positive, bool negative) => (positive ? 1 : 0) - (negative ? 1 : 0);
+
+        static float ReadAxis(KeyControl positive, KeyControl positiveAlt, KeyControl negative, KeyControl negativeAlt, float previous)
+        {
+            bool positiveHeld = positive.isPressed || positiveAlt.isPressed;
+            bool negativeHeld = negative.isPressed || negativeAlt.isPressed;
+            if (!(positiveHeld && negativeHeld))
+                return Axis(positiveHeld, negativeHeld);
+
+            // When both directions are held, the newer press takes control of the axis.
+            int pressed = Axis(positive.wasPressedThisFrame || positiveAlt.wasPressedThisFrame,
+                negative.wasPressedThisFrame || negativeAlt.wasPressedThisFrame);
+            return pressed == 0 ? previous : pressed;
+        }
 
         void FixedUpdate()
         {
@@ -129,6 +151,7 @@ namespace Inkshift
             {
                 GroundPoint = ground.point;
                 GroundNormal = ground.normal;
+                GroundSurface = ground.collider;
                 lastGrounded = Time.time;
                 jumpsUsed = 0;
                 cutJump = false;
@@ -136,8 +159,8 @@ namespace Inkshift
                     Feedback?.Invoke(SoundCue.Land);
             }
 
-            if (flipping && (!Grounded || flipElapsed >= flipDuration))
-                FinishFlip(Grounded && Vector3.Dot(body.position - flipStart, flipDirection) >= 0.86f);
+            if (flipping && (!Grounded || flipElapsed >= flipDuration || (flipReturning && flipElapsed <= 0f)))
+                FinishFlip(Grounded && !flipReturning && FlipDistance() >= 0.86f);
 
             if (switchQueued && !flipping)
             {
@@ -150,11 +173,17 @@ namespace Inkshift
 
             Quaternion heading = view.ControlRotation;
             Vector3 input = heading * Vector3.ClampMagnitude(new Vector3(move.x, 0f, move.y), 1f);
+            Vector3 planarVelocity = Planar(velocity);
+            if (planarVelocity.sqrMagnitude > 0.10f)
+                MovementDirection = planarVelocity.normalized;
+            else if (input.sqrMagnitude > 0f)
+                MovementDirection = input.normalized;
+
             if (jumpDeadline >= Time.time && jumpsUsed < 2)
             {
                 bool first = jumpsUsed == 0 && (Grounded || Time.time <= lastGrounded + CoyoteTime);
                 if (flipping)
-                    FinishFlip(flipElapsed >= flipDuration * 0.5f);
+                    FinishFlip(FlipDistance() >= 0.5f);
                 if (switchQueued)
                 {
                     switchQueued = false;
@@ -179,7 +208,7 @@ namespace Inkshift
             }
             else if (Grounded)
             {
-                velocity = DriveCube(heading, dt);
+                velocity = DriveCube(heading, input, dt);
             }
             else
             {
@@ -229,7 +258,7 @@ namespace Inkshift
             return Vector3.ClampMagnitude(tangent, ballSpeed + 0.9f) - normal * GroundStick;
         }
 
-        Vector3 DriveCube(Quaternion heading, float dt)
+        Vector3 DriveCube(Quaternion heading, Vector3 input, float dt)
         {
             if (!flipping && move != Vector2.zero)
             {
@@ -242,6 +271,7 @@ namespace Inkshift
                     || wall.normal.y >= 0.55f)
                 {
                     flipping = true;
+                    flipReturning = false;
                     flipElapsed = 0f;
                     flipStart = body.position;
                     flipDirection = direction;
@@ -251,21 +281,33 @@ namespace Inkshift
             if (!flipping)
                 return Vector3.down * GroundStick;
 
-            flipElapsed = Mathf.Min(flipElapsed + dt, flipDuration);
+            float traveled = FlipDistance();
+            float angle = FlipAngle(traveled);
+            float along = Vector3.Dot(input, flipDirection);
+            if ((!flipReturning && along < -0.45f) || (flipReturning && along > 0.45f))
+            {
+                flipReturning = !flipReturning;
+                flipElapsed = angle / (Mathf.PI * 0.5f) * flipDuration;
+            }
+
+            flipElapsed = Mathf.Clamp(flipElapsed + (flipReturning ? -dt : dt), 0f, flipDuration);
             float radians = Mathf.PI * 0.5f * (flipElapsed / flipDuration);
-            // Rotation about the leading lower edge advances the cube exactly one edge length.
+            // Returning uses the same pivot path, so it lands on the original position.
             float distance = 0.5f * (1f + Mathf.Sin(radians) - Mathf.Cos(radians));
-            float traveled = Vector3.Dot(body.position - flipStart, flipDirection);
-            float speed = Mathf.Clamp((distance - traveled) / dt, 0f, 7f);
-            float visualAngle = Mathf.Clamp(Mathf.Asin(Mathf.Clamp((2f * traveled - 1f) / Mathf.Sqrt(2f), -1f, 1f))
-                + Mathf.PI * 0.25f, 0f, Mathf.PI * 0.5f);
-            cube.localRotation = Quaternion.AngleAxis(visualAngle * Mathf.Rad2Deg, Vector3.Cross(Vector3.up, flipDirection)) * cubeRest;
-            cube.localPosition = Vector3.up * (0.5f * (Mathf.Sin(visualAngle) + Mathf.Cos(visualAngle)) - 0.5f);
+            float speed = Mathf.Clamp((distance - traveled) / dt, -7f, 7f);
+            cube.localRotation = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, Vector3.Cross(Vector3.up, flipDirection)) * cubeRest;
+            float lift = (0.5f - CubeCornerRadius) * (Mathf.Sin(angle) + Mathf.Cos(angle) - 1f);
+            cube.localPosition = Vector3.up * lift;
 
             Vector3 velocity = flipDirection * speed;
             velocity.y = -Vector3.Dot(velocity, GroundNormal) / GroundNormal.y - GroundStick;
             return velocity;
         }
+
+        float FlipDistance() => Vector3.Dot(body.position - flipStart, flipDirection);
+
+        static float FlipAngle(float distance) =>
+            Mathf.Asin((2f * Mathf.Clamp01(distance) - 1f) / Mathf.Sqrt(2f)) + Mathf.PI * 0.25f;
 
         void FinishFlip(bool completed)
         {

@@ -11,6 +11,7 @@ namespace Inkshift
 
         VisualElement root;
         GameFlow flow;
+        FeedbackAudio feedback;
         bool? lastBall;
         int lastJumps = -1;
         int lastHeading = -1;
@@ -25,6 +26,7 @@ namespace Inkshift
         public void Bind(GameFlow gameFlow)
         {
             flow = gameFlow;
+            feedback = GetComponent<FeedbackAudio>();
             root = GetComponent<UIDocument>().rootVisualElement;
             root.StretchToParentSize();
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -34,18 +36,20 @@ namespace Inkshift
             compass = Get<Label>("compass");
             timer = Get<Label>("timer");
             retryCount = Get<Label>("retryCount");
-            Get<Button>("playButton").clicked += flow.Play;
-            Get<Button>("stagesButton").clicked += flow.ShowStages;
-            Get<Button>("backButton").clicked += flow.ShowTitle;
-            Get<Button>("pauseButton").focusable = false;
-            Get<Button>("pauseButton").clicked += flow.Pause;
-            Get<Button>("quitButton").clicked += flow.Quit;
+            BindClick(Get<Button>("playButton"), flow.Play);
+            BindClick(Get<Button>("stagesButton"), flow.ShowStages);
+            BindClick(Get<Button>("backButton"), flow.ShowTitle);
+            Button pause = Get<Button>("pauseButton");
+            pause.focusable = false;
+            BindClick(pause, flow.Pause);
+            BindClick(Get<Button>("quitButton"), flow.Quit);
             Visible("quitButton", !Application.isEditor);
         }
 
         public void ShowTitle(Campaign campaign)
         {
             Screen("titleScreen");
+            Reveal(Get<VisualElement>("titleScreen").Q(className: "title-panel"));
             int cleared = campaign.ClearedCount;
             Get<Label>("titleProgress").text = $"{cleared:D2} / {campaign.Count:D2} ROUTES CLEARED";
             Get<Button>("playButton").text = cleared == 0 ? "START RUN" : cleared == campaign.Count ? "RUN AGAIN" : "CONTINUE RUN";
@@ -55,6 +59,7 @@ namespace Inkshift
         public void ShowStages(Campaign campaign)
         {
             Screen("stageScreen");
+            Reveal(Get<VisualElement>("stageScreen").Q(className: "card"));
             VisualElement list = Get<VisualElement>("stageList");
             list.Clear();
             Button first = null;
@@ -65,7 +70,8 @@ namespace Inkshift
                 bool unlocked = campaign.IsUnlocked(i);
                 float best = campaign.BestTime(i);
 
-                var row = new Button(() => flow.SelectStage(index));
+                var row = new Button();
+                BindClick(row, () => flow.SelectStage(index));
                 row.AddToClassList("stage-row");
                 var number = new Label($"{i + 1:D2}");
                 number.AddToClassList("stage-number");
@@ -106,16 +112,22 @@ namespace Inkshift
             {
                 form.text = ball ? "BALL" : "CUBE";
                 form.EnableInClassList("ball", ball);
+                if (lastBall.HasValue)
+                    Pulse(form);
                 lastBall = ball;
             }
             if (lastJumps != jumpsLeft)
             {
                 jumps.text = JumpPips[jumpsLeft];
+                if (lastJumps >= 0)
+                    Pulse(jumps);
                 lastJumps = jumpsLeft;
             }
             if (lastHeading != heading)
             {
                 compass.text = Headings[heading];
+                if (lastHeading >= 0)
+                    Pulse(compass);
                 lastHeading = heading;
             }
             int tenths = Mathf.FloorToInt(elapsed * 10f);
@@ -131,14 +143,21 @@ namespace Inkshift
             }
         }
 
-        public void SetCheckpoint(bool reached) =>
-            Get<Label>("checkpoint").text = reached ? "CHECKPOINT SET" : "R  /  RETRY";
+        public void SetCheckpoint(bool reached)
+        {
+            Label badge = Get<Label>("checkpoint");
+            badge.text = reached ? "CHECKPOINT SET" : "R  /  RETRY";
+            badge.EnableInClassList("reached", reached);
+            if (reached)
+                Pulse(badge);
+        }
 
         public void ShowHint(string title, string message)
         {
             Get<Label>("hintTitle").text = title;
             Get<Label>("hintBody").text = message;
             Visible("hint", true);
+            Reveal(Get<VisualElement>("hint"));
         }
 
         public void HideHint() => Visible("hint", false);
@@ -173,16 +192,39 @@ namespace Inkshift
             if (showTitleAction)
                 actions.Add(MakeButton("TITLE MENU", flow.LeaveStage));
             Visible("dialog", true);
+            Reveal(Get<VisualElement>("dialog").Q(className: "card"));
             Focus(primary);
         }
 
-        static Button MakeButton(string title, System.Action action, bool primary = false)
+        Button MakeButton(string title, System.Action action, bool primary = false)
         {
-            var button = new Button(action) { text = title };
+            var button = new Button { text = title };
+            BindClick(button, action);
             button.AddToClassList("action");
             if (primary)
                 button.AddToClassList("primary");
             return button;
+        }
+
+        void BindClick(Button button, System.Action action)
+        {
+            button.clicked += () =>
+            {
+                feedback.Play(SoundCue.Flip);
+                action();
+            };
+        }
+
+        static void Reveal(VisualElement element)
+        {
+            element.AddToClassList("enter-from");
+            element.schedule.Execute(() => element.RemoveFromClassList("enter-from")).StartingIn(35);
+        }
+
+        static void Pulse(VisualElement element)
+        {
+            element.AddToClassList("feedback-pulse");
+            element.schedule.Execute(() => element.RemoveFromClassList("feedback-pulse")).StartingIn(140);
         }
 
         public void CloseDialog() => Visible("dialog", false);

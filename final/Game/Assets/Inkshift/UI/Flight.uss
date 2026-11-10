@@ -1,4 +1,7 @@
 .flight {
+    --panel-radius: 23px;
+    --control-radius: 13px;
+    --chip-radius: 12px;
     flex-grow: 1;
     color: #f7fbfc;
     font-size: 20px;
@@ -15,19 +18,21 @@
 .title-screen {
     flex-direction: row;
     align-items: stretch;
-    background-color: rgba(12, 35, 55, 0.22);
+    background-color: rgba(12, 35, 55, 0.05);
 }
 
 .title-panel {
     flex-direction: column;
     justify-content: center;
-    width: 55%;
-    max-width: 680px;
-    min-width: 510px;
-    padding: 50px 58px;
-    background-color: rgba(9, 25, 42, 0.96);
-    border-right-width: 3px;
-    border-right-color: #4ce3d7;
+    width: 49%;
+    max-width: 645px;
+    min-width: 500px;
+    margin: 36px 0 36px 36px;
+    padding: 42px 50px;
+    background-color: rgba(10, 28, 47, 0.96);
+    border-width: 1px;
+    border-color: rgba(148, 205, 227, 0.72);
+    border-radius: var(--panel-radius);
 }
 
 .eyebrow {
@@ -56,6 +61,7 @@
     height: 4px;
     margin-bottom: 26px;
     background-color: #ff9c63;
+    border-radius: 2px;
 }
 
 .title-actions {
@@ -71,7 +77,9 @@
     background-color: #16354c;
     border-width: 2px;
     border-color: #325671;
-    border-radius: 4px;
+    border-radius: var(--control-radius);
+    transition-duration: 0.13s;
+    transition-timing-function: ease-out;
     font-size: 17px;
     -unity-font-style: bold;
     -unity-text-align: middle-left;
@@ -80,10 +88,17 @@
 .action:hover {
     background-color: #254c64;
     border-color: #9ac9d6;
+    translate: 3px 0;
 }
 
 .action:focus {
     border-color: #fff0bb;
+}
+
+.action:active {
+    scale: 0.97 0.97;
+    translate: 2px 1px;
+    background-color: #2d6177;
 }
 
 .action.primary {
@@ -99,6 +114,10 @@
 
 .action.primary:focus {
     border-color: #fff0bb;
+}
+
+.action.primary:active {
+    background-color: #51c7b9;
 }
 
 .caption {
@@ -119,9 +138,10 @@
     right: 38px;
     bottom: 32px;
     padding: 10px 15px;
-    background-color: #102b3e;
-    border-left-width: 4px;
-    border-left-color: #ff9c63;
+    background-color: rgba(10, 31, 47, 0.93);
+    border-width: 1px;
+    border-color: #ffa76f;
+    border-radius: var(--chip-radius);
     color: #fff1db;
     font-size: 15px;
     -unity-font-style: bold;
@@ -130,7 +150,7 @@
 .centered {
     align-items: center;
     justify-content: center;
-    background-color: rgba(6, 16, 29, 0.74);
+    background-color: rgba(6, 16, 29, 0.59);
 }
 
 .card {
@@ -138,11 +158,22 @@
     max-width: 680px;
     padding: 30px 34px;
     background-color: #0e263a;
-    border-width: 2px;
-    border-color: #4a758a;
-    border-top-width: 4px;
-    border-top-color: #63e6d8;
-    border-radius: 6px;
+    border-width: 1px;
+    border-color: #6f9eae;
+    border-radius: var(--panel-radius);
+}
+
+.title-panel,
+.card,
+.hint {
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out;
+}
+
+.enter-from {
+    opacity: 0;
+    translate: 0 12px;
+    scale: 0.98 0.98;
 }
 
 .section-title {
@@ -166,21 +197,31 @@
     color: #f5fcff;
     border-width: 2px;
     border-color: #32566c;
-    border-radius: 4px;
+    border-radius: var(--control-radius);
+    transition-duration: 0.13s;
+    transition-timing-function: ease-out;
 }
 
 .stage-row:hover {
     background-color: #285169;
+    translate: 3px 0;
 }
 
 .stage-row:focus {
     border-color: #fff0bb;
 }
 
+.stage-row:active {
+    scale: 0.98 0.98;
+    background-color: #376279;
+}
+
 .stage-row:disabled {
     background-color: #142a3c;
     border-color: #294359;
     color: #9bb4c3;
+    translate: 0 0;
+    scale: 1 1;
 }
 
 .stage-number {
@@ -207,9 +248,11 @@
 }
 
 .flight-card {
-    background-color: rgba(9, 26, 42, 0.92);
-    border-radius: 5px;
-    padding: 11px 16px;
+    background-color: rgba(9, 28, 46, 0.91);
+    border-width: 1px;
+    border-color: rgba(165, 216, 229, 0.55);
+    border-radius: var(--panel-radius);
+    padding: 12px 17px;
 }
 
 .hud-left {
@@ -217,8 +260,6 @@
     top: 23px;
     left: 25px;
     min-width: 224px;
-    border-left-width: 4px;
-    border-left-color: #60e4d8;
 }
 
 .hud-right {
@@ -245,7 +286,7 @@
     padding: 2px 6px;
     color: #2e2533;
     background-color: #ffa469;
-    border-radius: 3px;
+    border-radius: var(--chip-radius);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     font-size: 15px;
@@ -278,6 +319,18 @@
     -unity-text-align: middle-center;
 }
 
+.form,
+.jump-pips,
+.compass,
+.checkpoint {
+    transition-duration: 0.14s;
+    transition-timing-function: ease-out;
+}
+
+.feedback-pulse {
+    scale: 1.15 1.15;
+}
+
 .pause-button {
     margin: 6px 0 0 0;
     min-height: 30px;
@@ -291,8 +344,7 @@
     bottom: 26px;
     width: 48%;
     max-width: 525px;
-    border-left-width: 4px;
-    border-left-color: #ffad73;
+    border-color: rgba(255, 184, 124, 0.78);
 }
 
 .hint-body {
@@ -307,8 +359,15 @@
     right: 25px;
     bottom: 26px;
     color: #9df1e4;
+    border-radius: var(--chip-radius);
     font-size: 14px;
     -unity-font-style: bold;
+}
+
+.checkpoint.reached {
+    color: #132c35;
+    background-color: #8ef1cf;
+    border-color: #c5f9e5;
 }
 
 .dialog-actions {
