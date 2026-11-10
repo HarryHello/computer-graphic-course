@@ -38,6 +38,7 @@ namespace Inkshift
 
         bool flipping;
         bool flipReturning;
+        Vector2 flipInput;
         float flipElapsed;
         Vector3 flipStart;
         Vector3 flipDirection;
@@ -272,6 +273,7 @@ namespace Inkshift
                 {
                     flipping = true;
                     flipReturning = false;
+                    flipInput = move;
                     flipElapsed = 0f;
                     flipStart = body.position;
                     flipDirection = direction;
@@ -283,11 +285,16 @@ namespace Inkshift
 
             float traveled = FlipDistance();
             float angle = FlipAngle(traveled);
-            float along = Vector3.Dot(input, flipDirection);
-            if ((!flipReturning && along < -0.45f) || (flipReturning && along > 0.45f))
+            if (move != flipInput)
             {
-                flipReturning = !flipReturning;
-                flipElapsed = angle / (Mathf.PI * 0.5f) * flipDuration;
+                // Turning the camera remaps the next step, while a changed key can reverse this one.
+                flipInput = move;
+                float along = Vector3.Dot(input, flipDirection);
+                if ((!flipReturning && along < -0.45f) || (flipReturning && along > 0.45f))
+                {
+                    flipReturning = !flipReturning;
+                    flipElapsed = angle / (Mathf.PI * 0.5f) * flipDuration;
+                }
             }
 
             flipElapsed = Mathf.Clamp(flipElapsed + (flipReturning ? -dt : dt), 0f, flipDuration);
