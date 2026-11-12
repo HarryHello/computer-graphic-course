@@ -8,6 +8,7 @@ namespace Inkshift
         [SerializeField] ShapeMotor target;
         [SerializeField] float distance = 8f;
         [SerializeField] float height = 8.8f;
+        [SerializeField] float lookAhead = 1.4f;
         [SerializeField] float turnDuration = 0.34f;
 
         Camera lens;
@@ -61,7 +62,7 @@ namespace Inkshift
         void PositionCamera()
         {
             Quaternion orbit = Quaternion.Euler(0f, yaw, 0f);
-            Vector3 look = focus + orbit * new Vector3(0f, 0.1f, 1.4f);
+            Vector3 look = focus + orbit * new Vector3(0f, 0.1f, lookAhead);
             Vector3 position = focus + orbit * new Vector3(0f, height, -distance);
             transform.SetPositionAndRotation(position, Quaternion.LookRotation(look - position, Vector3.up));
         }

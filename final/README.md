@@ -1,6 +1,6 @@
 # Inkshift
 
-小组选择 **第 7 题：游戏建模和动画**，用 Unity 制作单人 3D 平台跳跃游戏。玩家在云上的四条路线中切换立方体和球体，跨越平台并留下颜料。
+小组选择 **第 7 题：游戏建模和动画**，用 Unity 制作单人 3D 平台跳跃游戏。玩家在四条路线中切换立方体和球体，跨越平台并留下颜料。第一关 **First Marks** 位于封闭实验室，其余关卡使用浮空平台和云层。
 
 ## 试玩
 
@@ -24,7 +24,13 @@
 - [Campaign.asset](Game/Assets/Inkshift/Campaign.asset)定义关卡顺序、场景名和简介。[Player.prefab](Game/Assets/Inkshift/Player.prefab)包含共享的玩家控制参数。各场景的 **Route Markers** 保存检查点、提示区和终点。
 - 构建时使用 Unity 的 **File → Build Profiles**，目标为 macOS 和 Windows。标题场景在场景列表第一位。
 
-当前版本使用 Unity URP 光照和阴影。课程要求中的自实现 Phong 光照、阴影、Phong / Gouraud 着色模式及模型导入与网格查看留待后续完成。
+当前版本使用 Unity URP 光照和阴影。第一关已导入 Blender 模型。课程要求中的自实现 Phong 光照和阴影、Phong / Gouraud 着色切换及网格查看留待后续完成。
+
+## 实验室模型
+
+[InkshiftLabKit.blend](art/InkshiftLabKit.blend) 包含六个可编辑模块，分别是墙板、壁灯、管架、卷帘门、排水格栅和平台支架。模块保留了独立零件、倒角修改器和导出原点。Unity 使用 [Models](Game/Assets/Inkshift/Art/Lab/Models/) 中的 FBX，由 [Prefabs](Game/Assets/Inkshift/Art/Lab/Prefabs/) 配置材质和场景引用。
+
+细化模型时按米编辑，以各集合的 `export origin` 为模块原点。导出时应用修改器、合并模块网格，保留原模型名以及材质槽的名称和顺序，使用 `-Z Forward`、`Y Up`。墙板宽 5.2 米、高 4 米，前表面朝 Blender 的 `-Y`。将导出的 FBX 替换到原路径，保留 Unity 生成的 `.meta` 文件。重新导入后在 `FirstMarks` 检查墙缝、灯具和 Q / E 转向时的视野。
 
 ## 题目要求
 

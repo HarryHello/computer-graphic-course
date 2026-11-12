@@ -23,10 +23,14 @@ Shader "Inkshift/Slime Gel"
             #pragma vertex Vertex
             #pragma fragment Fragment
             #pragma multi_compile_fragment _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareOpaqueTexture.hlsl"
+            #include "InkshiftLocalLighting.hlsl"
 
             TEXTURE2D(_Pattern);
             SAMPLER(sampler_Pattern);
@@ -80,7 +84,10 @@ Shader "Inkshift/Slime Gel"
                 float highlight = pow(saturate(dot(n, SafeNormalize(sun.direction + view))), 98.0) * sun.shadowAttenuation;
                 float sheen = pow(saturate(dot(n, SafeNormalize(float3(-0.44, 0.8, 0.40) + view))), 21.0);
                 float3 rim = lerp(_Tint.rgb, float3(0.84, 1, 1), 0.43);
-                return half4(lerp(body, rim, 0.58 * fresnel) + sun.color * highlight * 0.75 + sheen * 0.17, 1);
+                float3 diffuse, specular;
+                InkshiftLocalLighting(input.positionWS, screenUV, n, view, 78.0, diffuse, specular);
+                float3 color = lerp(body, rim, 0.58 * fresnel) + sun.color * highlight * 0.75 + sheen * 0.17;
+                return half4(color + _Tint.rgb * diffuse * 0.16 + specular * 0.65, 1);
             }
             ENDHLSL
         }
@@ -95,15 +102,22 @@ Shader "Inkshift/Slime Gel"
             HLSLPROGRAM
             #pragma vertex ShadowVertex
             #pragma fragment ShadowFragment
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             float3 _LightDirection;
+            float3 _LightPosition;
 
             float4 ShadowVertex(float3 positionOS : POSITION, float3 normalOS : NORMAL) : SV_POSITION
             {
                 float3 position = TransformObjectToWorld(positionOS);
                 float3 normal = TransformObjectToWorldNormal(normalOS);
-                return ApplyShadowClamping(TransformWorldToHClip(ApplyShadowBias(position, normal, _LightDirection)));
+#if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
+                float3 lightDirection = normalize(_LightPosition - position);
+#else
+                float3 lightDirection = _LightDirection;
+#endif
+                return ApplyShadowClamping(TransformWorldToHClip(ApplyShadowBias(position, normal, lightDirection)));
             }
 
             half4 ShadowFragment() : SV_Target { return 0; }

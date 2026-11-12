@@ -20,10 +20,14 @@ Shader "Inkshift/Liquid Ink"
             #pragma vertex Vertex
             #pragma fragment Fragment
             #pragma multi_compile_fragment _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "InkshiftLocalLighting.hlsl"
 
             TEXTURE2D(_InkState);
             SAMPLER(sampler_InkState);
@@ -97,6 +101,10 @@ Shader "Inkshift/Liquid Ink"
                 color += sun.color * gloss * lerp(0.32, 1.05, wet);
                 color += (skyGlint * (0.09 + 0.13 * wet) + rim * 0.22) * float3(0.69, 0.84, 1.0);
                 color += meniscus * edgeLight * wet * float3(0.38, 0.45, 0.51);
+                float3 localDiffuse, localGloss;
+                InkshiftLocalLighting(input.positionWS, GetNormalizedScreenSpaceUV(input.positionCS), n, view,
+                    lerp(24.0, 70.0, wet), localDiffuse, localGloss);
+                color += pigment * localDiffuse * lerp(0.12, 0.27, pool) + localGloss * lerp(0.34, 0.85, wet);
                 return half4(MixFog(color, input.fog), 1);
             }
             ENDHLSL
