@@ -30,8 +30,10 @@ Material:
     m_Ints: []
     m_Floats:
     - _PatternWeight: 0
-    - _Refraction: 0.036
+    - _PigmentDensity: 0.69
+    - _Refraction: 0.032
+    - _RoomReflection: 0.92
     m_Colors:
-    - _Tint: {r: 1, g: 0.44, b: 0.16, a: 1}
+    - _Tint: {r: 1, g: 0.405, b: 0.084, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

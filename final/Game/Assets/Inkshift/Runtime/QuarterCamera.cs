@@ -9,6 +9,7 @@ namespace Inkshift
         [SerializeField] float distance = 8f;
         [SerializeField] float height = 8.8f;
         [SerializeField] float lookAhead = 1.4f;
+        [SerializeField, Range(20f, 90f)] float fieldOfView = 51f;
         [SerializeField] float turnDuration = 0.34f;
 
         Camera lens;
@@ -30,7 +31,7 @@ namespace Inkshift
             turnElapsed = turnDuration;
             focus = position;
             focusVelocity = Vector3.zero;
-            lens.fieldOfView = 51f;
+            lens.fieldOfView = fieldOfView;
             PositionCamera();
         }
 
@@ -55,7 +56,7 @@ namespace Inkshift
             float speed = lead.magnitude;
             focus = Vector3.SmoothDamp(focus, target.transform.position + Vector3.ClampMagnitude(lead * 0.12f, 1.45f),
                 ref focusVelocity, 0.13f, Mathf.Infinity, dt);
-            lens.fieldOfView = Mathf.Lerp(lens.fieldOfView, 51f + Mathf.Clamp01(speed / 12f) * 5f, 1f - Mathf.Exp(-5f * dt));
+            lens.fieldOfView = Mathf.Lerp(lens.fieldOfView, fieldOfView + Mathf.Clamp01(speed / 12f) * 5f, 1f - Mathf.Exp(-5f * dt));
             PositionCamera();
         }
 

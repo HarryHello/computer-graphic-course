@@ -28,9 +28,9 @@
 
 ## 实验室模型
 
-[InkshiftLabKit.blend](art/InkshiftLabKit.blend) 包含六个可编辑模块，分别是墙板、壁灯、管架、卷帘门、排水格栅和平台支架。模块保留了独立零件、倒角修改器和导出原点。Unity 使用 [Models](Game/Assets/Inkshift/Art/Lab/Models/) 中的 FBX，由 [Prefabs](Game/Assets/Inkshift/Art/Lab/Prefabs/) 配置材质和场景引用。
+[InkshiftLabKit.blend](art/InkshiftLabKit.blend) 包含八个可编辑模块，分别是墙板、顶部桁架、壁灯、管架、管道弯头、卷帘门、排水格栅和平台支架。模块保留了独立零件、倒角修改器和导出原点。Unity 使用 [Models](Game/Assets/Inkshift/Art/Lab/Models/) 中的 FBX，由 [Prefabs](Game/Assets/Inkshift/Art/Lab/Prefabs/) 配置材质和场景引用。
 
-细化模型时按米编辑，以各集合的 `export origin` 为模块原点。导出时应用修改器、合并模块网格，保留原模型名以及材质槽的名称和顺序，使用 `-Z Forward`、`Y Up`。墙板宽 5.2 米、高 4 米，前表面朝 Blender 的 `-Y`。将导出的 FBX 替换到原路径，保留 Unity 生成的 `.meta` 文件。重新导入后在 `FirstMarks` 检查墙缝、灯具和 Q / E 转向时的视野。
+细化模型时按米编辑，以各集合的 `export origin` 为模块原点。导出时应用修改器、合并模块网格，保留原模型名以及材质槽的名称和顺序，使用 `-Z Forward`、`Y Up`。墙板宽 5.2 米、高 4 米，前表面朝 Blender 的 `-Y`。将导出的 FBX 替换到原路径，保留 Unity 生成的 `.meta` 文件。Unity 导入后按槽名核对 Prefab 的材质，然后在 `FirstMarks` 检查拼缝、灯具和 Q / E 转向时的视野。
 
 ## 题目要求
 

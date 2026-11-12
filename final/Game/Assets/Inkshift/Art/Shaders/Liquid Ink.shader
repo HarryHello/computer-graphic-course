@@ -5,6 +5,7 @@ Shader "Inkshift/Liquid Ink"
         _InkState("Simulated pigment and wetness", 2D) = "black" {}
         _Orange("Tangerine pigment", Color) = (1, 0.33, 0.08, 1)
         _Aqua("Aqua pigment", Color) = (0.01, 0.78, 0.67, 1)
+        _RoomReflection("Room reflection", Range(0, 1)) = 0
     }
 
     SubShader
@@ -24,6 +25,9 @@ Shader "Inkshift/Liquid Ink"
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_ATLAS
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -35,6 +39,7 @@ Shader "Inkshift/Liquid Ink"
             float4 _InkState_TexelSize;
             float4 _Orange;
             float4 _Aqua;
+            float _RoomReflection;
             CBUFFER_END
 
             struct Attributes
@@ -86,6 +91,8 @@ Shader "Inkshift/Liquid Ink"
                     TransformObjectToWorldDir(float3(1, 0, 0)) * (dx * 2.45 + ripples.x) -
                     TransformObjectToWorldDir(float3(0, 0, 1)) * (dz * 2.45 + ripples.y));
                 float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
+                float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                float indoors = saturate(_RoomReflection * 2.0);
                 Light sun = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 float diffuse = saturate(dot(n, sun.direction)) * sun.shadowAttenuation;
                 float3 halfway = SafeNormalize(sun.direction + view);
@@ -99,12 +106,19 @@ Shader "Inkshift/Liquid Ink"
                 float edgeLight = 0.35 + 0.65 * saturate(dot(n, normalize(float3(-0.61, 0.65, -0.38))));
                 float3 color = pigment * (0.54 + 0.53 * diffuse) * lerp(0.66, 1.0, pool);
                 color += sun.color * gloss * lerp(0.32, 1.05, wet);
-                color += (skyGlint * (0.09 + 0.13 * wet) + rim * 0.22) * float3(0.69, 0.84, 1.0);
-                color += meniscus * edgeLight * wet * float3(0.38, 0.45, 0.51);
+                color += (skyGlint * (0.09 + 0.13 * wet) + rim * 0.22) * float3(0.69, 0.84, 1.0) * lerp(1.0, 0.18, indoors);
+                color += meniscus * edgeLight * wet * lerp(float3(0.38, 0.45, 0.51), pigment * 0.26 + 0.025, indoors);
                 float3 localDiffuse, localGloss;
-                InkshiftLocalLighting(input.positionWS, GetNormalizedScreenSpaceUV(input.positionCS), n, view,
-                    lerp(24.0, 70.0, wet), localDiffuse, localGloss);
-                color += pigment * localDiffuse * lerp(0.12, 0.27, pool) + localGloss * lerp(0.34, 0.85, wet);
+                float glossPower = lerp(24.0, 70.0, wet) * lerp(1.0, 3.4, indoors);
+                InkshiftLocalLighting(input.positionWS, screenUV, n, view, glossPower, localDiffuse, localGloss);
+                color += pigment * localDiffuse * lerp(0.12, 0.27, pool);
+                color += localGloss * lerp(0.34, 0.85, wet) * lerp(1.0, 1.65, indoors);
+                if (_RoomReflection > 0.0)
+                {
+                    float roughness = lerp(0.25, 0.11, wet);
+                    float3 environment = GlossyEnvironmentReflection(reflection, input.positionWS, roughness, 1.0, screenUV);
+                    color += environment * _RoomReflection * (0.18 + 0.72 * rim);
+                }
                 return half4(MixFog(color, input.fog), 1);
             }
             ENDHLSL
