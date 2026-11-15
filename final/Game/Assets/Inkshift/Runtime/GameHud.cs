@@ -22,6 +22,9 @@ namespace Inkshift
         Label compass;
         Label timer;
         Label retryCount;
+        VisualElement blackout;
+        VisualElement routePips;
+        public float Blackout { get; private set; }
 
         public void Bind(GameFlow gameFlow)
         {
@@ -36,6 +39,8 @@ namespace Inkshift
             compass = Get<Label>("compass");
             timer = Get<Label>("timer");
             retryCount = Get<Label>("retryCount");
+            blackout = Get<VisualElement>("blackout");
+            routePips = Get<VisualElement>("routePips");
             BindClick(Get<Button>("playButton"), flow.Play);
             BindClick(Get<Button>("stagesButton"), flow.ShowStages);
             BindClick(Get<Button>("backButton"), flow.ShowTitle);
@@ -53,14 +58,16 @@ namespace Inkshift
             int cleared = campaign.ClearedCount;
             Get<Label>("titleProgress").text = $"{cleared:D2} / {campaign.Count:D2} ROUTES CLEARED";
             Get<Button>("playButton").text = cleared == 0 ? "START RUN" : cleared == campaign.Count ? "RUN AGAIN" : "CONTINUE RUN";
-            Focus(Get<Button>("playButton"));
         }
+
+        public void FocusTitle() => Focus(Get<Button>("playButton"));
 
         public void ShowStages(Campaign campaign)
         {
             Screen("stageScreen");
             Reveal(Get<VisualElement>("stageScreen").Q(className: "card"));
-            VisualElement list = Get<VisualElement>("stageList");
+            Get<Label>("stageProgress").text = $"{campaign.ClearedCount:D2} / {campaign.Count:D2} ROUTES CLEARED";
+            ScrollView list = Get<ScrollView>("stageList");
             list.Clear();
             Button first = null;
             for (int i = 0; i < campaign.Count; i++)
@@ -73,21 +80,22 @@ namespace Inkshift
                 var row = new Button();
                 BindClick(row, () => flow.SelectStage(index));
                 row.AddToClassList("stage-row");
-                var number = new Label($"{i + 1:D2}");
+                var number = new Label($"{i + 1:D2}") { pickingMode = PickingMode.Ignore };
                 number.AddToClassList("stage-number");
                 row.Add(number);
 
-                var route = new VisualElement();
+                var route = new VisualElement { pickingMode = PickingMode.Ignore };
                 route.AddToClassList("stage-route");
-                var title = new Label(info.Title);
+                var title = new Label(info.Title) { pickingMode = PickingMode.Ignore };
                 title.AddToClassList("stage-name");
-                var focus = new Label(info.Focus);
+                var focus = new Label(info.Focus) { pickingMode = PickingMode.Ignore };
                 focus.AddToClassList("caption");
                 route.Add(title);
                 route.Add(focus);
                 row.Add(route);
 
-                var state = new Label(best > 0f ? FormatTime(best) : unlocked ? "READY" : "LOCKED");
+                string status = best > 0f ? FormatTime(best) : campaign.IsCleared(i) ? "CLEARED" : unlocked ? "READY" : "LOCKED";
+                var state = new Label(status) { pickingMode = PickingMode.Ignore };
                 state.AddToClassList("stage-state");
                 row.Add(state);
                 row.SetEnabled(unlocked);
@@ -98,12 +106,12 @@ namespace Inkshift
             Focus(first ?? Get<Button>("backButton"));
         }
 
-        public void ShowStage(int index, int count, StageInfo stage)
+        public void ShowStage(int index, int count, StageInfo stage, int checkpointCount)
         {
             Screen("stageHud");
             Get<Label>("routeId").text = $"ROUTE {index + 1:D2} / {count:D2}";
             Get<Label>("routeName").text = stage.Title;
-            SetCheckpoint(false);
+            SetCheckpoint(0, checkpointCount);
         }
 
         public void UpdateMeters(bool ball, int jumpsLeft, int heading, float elapsed, int retries)
@@ -118,7 +126,7 @@ namespace Inkshift
             }
             if (lastJumps != jumpsLeft)
             {
-                jumps.text = JumpPips[jumpsLeft];
+                jumps.text = JumpPips[Mathf.Clamp(jumpsLeft, 0, JumpPips.Length - 1)];
                 if (lastJumps >= 0)
                     Pulse(jumps);
                 lastJumps = jumpsLeft;
@@ -143,12 +151,21 @@ namespace Inkshift
             }
         }
 
-        public void SetCheckpoint(bool reached)
+        public void SetCheckpoint(int reached, int count)
         {
+            routePips.Clear();
+            for (int i = 0; i <= count; i++)
+            {
+                var pip = new VisualElement { pickingMode = PickingMode.Ignore };
+                pip.AddToClassList("route-pip");
+                pip.EnableInClassList("passed", i < reached);
+                pip.EnableInClassList("current", i == reached);
+                routePips.Add(pip);
+            }
             Label badge = Get<Label>("checkpoint");
-            badge.text = reached ? "CHECKPOINT SET" : "R  /  RETRY";
-            badge.EnableInClassList("reached", reached);
-            if (reached)
+            badge.text = reached == 0 ? "R   Retry" : $"R   Checkpoint {reached:D2}";
+            badge.EnableInClassList("reached", reached > 0);
+            if (reached > 0)
                 Pulse(badge);
         }
 
@@ -164,7 +181,7 @@ namespace Inkshift
 
         public void ShowPause(string stageName)
         {
-            ShowDialog("FLIGHT ON HOLD", "Paused", stageName, "RESUME", flow.Resume);
+            ShowDialog("ROUTE PAUSED", "Paused", stageName, "RESUME", flow.Resume, "RESTART ROUTE");
         }
 
         public void ShowResult(Campaign campaign, int index, float elapsed, int retries, bool best)
@@ -175,11 +192,11 @@ namespace Inkshift
             string result = $"{FormatTime(elapsed)}   /   {retries:D2} RETRIES";
             if (best)
                 result += "   /   NEW BEST";
-            ShowDialog(status, complete ? "Sky painted." : campaign[index].Title, result,
-                last ? "BACK TO TITLE" : "NEXT ROUTE", flow.Continue, !last);
+            ShowDialog(status, complete ? "Run complete" : campaign[index].Title, result,
+                last ? "BACK TO TITLE" : "NEXT ROUTE", flow.Continue, "REPLAY ROUTE", !last);
         }
 
-        void ShowDialog(string eyebrow, string title, string text, string action, System.Action callback, bool showTitleAction = true)
+        void ShowDialog(string eyebrow, string title, string text, string action, System.Action callback, string replay, bool showTitleAction = true)
         {
             Get<Label>("dialogEyebrow").text = eyebrow;
             Get<Label>("dialogTitle").text = title;
@@ -188,9 +205,10 @@ namespace Inkshift
             actions.Clear();
             Button primary = MakeButton(action, callback, true);
             actions.Add(primary);
-            actions.Add(MakeButton("RESTART ROUTE", flow.RestartStage));
+            actions.Add(MakeButton(replay, flow.RestartStage));
             if (showTitleAction)
                 actions.Add(MakeButton("TITLE MENU", flow.LeaveStage));
+            Visible("loadError", false);
             Visible("dialog", true);
             Reveal(Get<VisualElement>("dialog").Q(className: "card"));
             Focus(primary);
@@ -228,14 +246,29 @@ namespace Inkshift
         }
 
         public void CloseDialog() => Visible("dialog", false);
-        public void ShowLoading() => Screen("loading");
+        public void SetStageHudVisible(bool visible) => Visible("stageHud", visible);
+        public void ShowLoadError() => Visible("loadError", true);
+
+        public void SetBlackout(float opacity)
+        {
+            Blackout = opacity;
+            blackout.style.opacity = opacity;
+            blackout.pickingMode = opacity > 0f ? PickingMode.Position : PickingMode.Ignore;
+        }
+
+        public void SetMenuInput(bool enabled)
+        {
+            Get<VisualElement>("titleScreen").SetEnabled(enabled);
+            Get<VisualElement>("stageScreen").SetEnabled(enabled);
+            Get<VisualElement>("dialog").SetEnabled(enabled);
+        }
 
         void Screen(string active)
         {
             Visible("titleScreen", active == "titleScreen");
             Visible("stageScreen", active == "stageScreen");
             Visible("stageHud", active == "stageHud");
-            Visible("loading", active == "loading");
+            Visible("loadError", false);
             CloseDialog();
         }
 

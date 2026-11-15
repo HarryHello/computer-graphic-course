@@ -12,6 +12,7 @@ namespace Inkshift
         [SerializeField] int checkpointOrder;
         [SerializeField, Tooltip("Respawn point. Its forward axis follows the next section of the route.")]
         Transform spawn;
+        [SerializeField] LabExitDoor exitDoor;
         [SerializeField] MeshRenderer indicator;
         [SerializeField] Material activeMaterial;
         [SerializeField] string title;
@@ -20,6 +21,7 @@ namespace Inkshift
         public ZoneKind Kind => kind;
         public int Order => checkpointOrder;
         public Transform Spawn => spawn;
+        public LabExitDoor ExitDoor => exitDoor;
         public string Title => title;
         public string Message => message;
 

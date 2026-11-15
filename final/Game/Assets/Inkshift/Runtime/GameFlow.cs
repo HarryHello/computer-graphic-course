@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,7 +9,7 @@ namespace Inkshift
     [RequireComponent(typeof(GameHud), typeof(FeedbackAudio))]
     public sealed class GameFlow : MonoBehaviour
     {
-        enum Mode { Title, StageSelect, Running, Paused, Cleared, Loading }
+        enum Mode { Arriving, Title, StageSelect, Running, Paused, Respawning, Finishing, Cleared, Loading }
 
         [SerializeField] Campaign campaign;
         [SerializeField] int stageIndex = -1;
@@ -25,6 +26,7 @@ namespace Inkshift
         float elapsed;
         float hintUntil;
         int retries;
+        StageZone[] checkpoints;
 
         void Start()
         {
@@ -32,18 +34,38 @@ namespace Inkshift
             hud = GetComponent<GameHud>();
             audioFeedback = GetComponent<FeedbackAudio>();
             hud.Bind(this);
+            if (stageIndex >= 0)
+            {
+                player.Feedback += audioFeedback.Play;
+                PlaceAt(startPoint, startAsBall);
+                StageZone[] zones = FindObjectsByType<StageZone>(FindObjectsSortMode.None);
+                checkpoints = Array.FindAll(zones, zone => zone.Kind == ZoneKind.Checkpoint);
+                hud.ShowStage(stageIndex, campaign.Count, campaign[stageIndex], checkpoints.Length);
+                hud.UpdateMeters(player.IsBall, player.JumpsRemaining, view.Heading, elapsed, retries);
+            }
+            else
+            {
+                hud.ShowTitle(campaign);
+            }
+            StartCoroutine(Arrive());
+        }
+
+        IEnumerator Arrive()
+        {
+            hud.SetBlackout(1f);
+            yield return null;
+            yield return Fade(0f, 0.34f);
             if (stageIndex < 0)
             {
-                ShowTitle();
-                return;
+                mode = Mode.Title;
+                hud.FocusTitle();
             }
-
-            player.Feedback += audioFeedback.Play;
-            mode = Mode.Running;
-            player.AllowInput(true);
-            PlaceAt(startPoint, startAsBall, inputDelay: 0.18f);
-            hud.ShowStage(stageIndex, campaign.Count, campaign[stageIndex]);
-            Hint("FIELD NOTES", campaign[stageIndex].Brief, 7f);
+            else
+            {
+                mode = Mode.Running;
+                player.AllowInput(true);
+                Hint("ROUTE BRIEF", campaign[stageIndex].Brief, 7f);
+            }
         }
 
         void Update()
@@ -65,7 +87,12 @@ namespace Inkshift
 
             elapsed += Time.deltaTime;
             if (player.transform.position.y < deathHeight || (keys != null && keys.rKey.wasPressedThisFrame))
-                Respawn();
+            {
+                mode = Mode.Respawning;
+                player.AllowInput(false);
+                StartCoroutine(Respawn());
+                return;
+            }
             if (hintUntil > 0f && elapsed >= hintUntil)
             {
                 hud.HideHint();
@@ -94,6 +121,7 @@ namespace Inkshift
                 return;
             mode = Mode.Title;
             hud.ShowTitle(campaign);
+            hud.FocusTitle();
         }
 
         public void SelectStage(int index)
@@ -162,11 +190,16 @@ namespace Inkshift
                     checkpoint = zone;
                     zone.Activate();
                     audioFeedback.Play(SoundCue.Checkpoint);
-                    hud.SetCheckpoint(true);
+                    int reached = 0;
+                    foreach (StageZone marker in checkpoints)
+                        if (marker.Order <= zone.Order)
+                            reached++;
+                    hud.SetCheckpoint(reached, checkpoints.Length);
                     Hint("CHECKPOINT SET", zone.Message, 5.5f);
                     break;
                 case ZoneKind.Finish:
-                    ClearStage();
+                    mode = Mode.Finishing;
+                    StartCoroutine(ClearStage(zone.ExitDoor));
                     break;
             }
         }
@@ -177,52 +210,107 @@ namespace Inkshift
             hud.ShowHint(title, message);
         }
 
-        void ClearStage()
+        IEnumerator ClearStage(LabExitDoor door)
         {
-            mode = Mode.Cleared;
             player.AllowInput(false);
+            hud.HideHint();
             bool personalBest = campaign.RecordClear(stageIndex, elapsed);
+            if (door)
+            {
+                hud.SetStageHudVisible(false);
+                Vector3 from = player.BeginExit();
+                Vector3 cameraStart = view.transform.position;
+                Quaternion cameraRotation = view.transform.rotation;
+                Vector3 staging = door.StagingPosition;
+                Vector3 direction = staging - from;
+                int approachSteps = Mathf.RoundToInt(Vector3.ProjectOnPlane(direction, Vector3.up).magnitude);
+                yield return Animate(Mathf.Clamp(direction.magnitude / 4.8f, 0.32f, 0.7f), t =>
+                {
+                    player.MoveThroughExit(Vector3.Lerp(from, staging, t), direction, approachSteps * t);
+                    view.FrameExit(door.transform.position, door.Forward, cameraStart, cameraRotation, t);
+                });
+                player.SettleExitRoll();
+                audioFeedback.Play(SoundCue.Shutter);
+                yield return Animate(0.72f, door.SetOpenAmount);
+                Vector3 inside = door.InteriorPosition;
+                int entrySteps = Mathf.RoundToInt(Vector3.Distance(staging, inside));
+                yield return Animate(1.15f, t => player.MoveThroughExit(Vector3.Lerp(staging, inside, t),
+                    door.Forward, entrySteps * t));
+
+            }
+
             audioFeedback.Play(SoundCue.Clear);
+            mode = Mode.Cleared;
             Time.timeScale = 0f;
             hud.ShowResult(campaign, stageIndex, elapsed, retries, personalBest);
         }
 
-        void Respawn()
+        IEnumerator Respawn()
         {
             retries++;
             audioFeedback.Play(SoundCue.Fall);
+            yield return Fade(1f, 0.09f);
             Transform spawn = checkpoint ? checkpoint.Spawn : startPoint;
             PlaceAt(spawn, player.IsBall);
-            Hint("BACK ON THE LINE", checkpoint ? "Checkpoint restored. Hold forward to continue." : campaign[stageIndex].Brief, 3.6f);
+            hud.UpdateMeters(player.IsBall, player.JumpsRemaining, view.Heading, elapsed, retries);
+            yield return Fade(0f, 0.17f);
+            mode = Mode.Running;
+            player.AllowInput(true);
+            Hint(checkpoint ? "CHECKPOINT RESTORED" : "ROUTE RESTARTED",
+                checkpoint ? "Hold forward to continue." : campaign[stageIndex].Brief, 3.6f);
         }
 
-        void PlaceAt(Transform spawn, bool ball, float inputDelay = 0f)
+        void PlaceAt(Transform spawn, bool ball)
         {
             int heading = Mathf.RoundToInt(spawn.eulerAngles.y / 90f) % 4;
-            player.Place(spawn.position, heading, ball, inputDelay);
+            player.Place(spawn.position, heading, ball, 0f);
         }
 
         void Load(string sceneName)
         {
+            if (!Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                Debug.LogError($"Scene '{sceneName}' is missing from the build profile.", this);
+                hud.ShowLoadError();
+                return;
+            }
+
             mode = Mode.Loading;
+            hud.SetMenuInput(false);
             if (player)
                 player.AllowInput(false);
-            Time.timeScale = 1f;
-            hud.ShowLoading();
             StartCoroutine(LoadScene(sceneName));
         }
 
-        static IEnumerator LoadScene(string sceneName)
+        IEnumerator LoadScene(string sceneName)
         {
+            yield return Fade(1f, 0.3f);
             yield return null;
             yield return SceneManager.LoadSceneAsync(sceneName);
+        }
+
+        IEnumerator Fade(float target, float duration)
+        {
+            float from = hud.Blackout;
+            yield return Animate(duration, t => hud.SetBlackout(Mathf.Lerp(from, target, t)));
+        }
+
+        static IEnumerator Animate(float duration, Action<float> draw)
+        {
+            draw(0f);
+            for (float time = 0f; time < duration;)
+            {
+                yield return null;
+                time += Time.unscaledDeltaTime;
+                draw(Mathf.SmoothStep(0f, 1f, time / duration));
+            }
         }
 
         void OnDestroy()
         {
             if (player && audioFeedback)
                 player.Feedback -= audioFeedback.Play;
-            if (mode is Mode.Paused or Mode.Cleared)
+            if (mode is Mode.Paused or Mode.Cleared or Mode.Loading)
                 Time.timeScale = 1f;
         }
     }

@@ -36,6 +36,7 @@ namespace Inkshift
         float inputLockUntil;
         int jumpsUsed;
 
+        bool drivingExit;
         bool flipping;
         bool flipReturning;
         Vector2 flipInput;
@@ -101,6 +102,48 @@ namespace Inkshift
             Relocated?.Invoke();
         }
 
+        public Vector3 BeginExit()
+        {
+            AllowInput(false);
+            drivingExit = true;
+            body.linearVelocity = Vector3.zero;
+            body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            body.isKinematic = true;
+            body.interpolation = RigidbodyInterpolation.None;
+            if (flipping)
+                FinishFlip(FlipDistance() >= 0.5f);
+            Grounded = true;
+            GroundNormal = Vector3.up;
+            GroundSurface = null;
+            return transform.position - Vector3.up * Radius;
+        }
+
+        public void MoveThroughExit(Vector3 floorPosition, Vector3 direction, float steps)
+        {
+            Vector3 travel = floorPosition + Vector3.up * Radius - transform.position;
+            Vector3 horizontal = Planar(direction).normalized;
+            if (horizontal != Vector3.zero)
+                MovementDirection = horizontal;
+
+            if (IsBall)
+            {
+                RollSphere(travel);
+            }
+            else
+            {
+                float angle = FlipAngle(Mathf.Repeat(steps, 1f));
+                Vector3 rollDirection = Mathf.Abs(MovementDirection.x) > Mathf.Abs(MovementDirection.z)
+                    ? Vector3.right * Mathf.Sign(MovementDirection.x)
+                    : Vector3.forward * Mathf.Sign(MovementDirection.z);
+                Vector3 axis = Vector3.Cross(Vector3.up, rollDirection);
+                cube.localRotation = Quaternion.AngleAxis(Mathf.Floor(steps) * 90f + angle * Mathf.Rad2Deg, axis) * cubeRest;
+                cube.localPosition = Vector3.up * ((0.5f - CubeCornerRadius) * (Mathf.Sin(angle) + Mathf.Cos(angle) - 1f));
+            }
+            transform.position = floorPosition + Vector3.up * Radius;
+        }
+
+        public void SettleExitRoll() => cubeRest = cube.localRotation;
+
         void Update()
         {
             if (!controlsEnabled || Time.time < inputLockUntil)
@@ -140,6 +183,9 @@ namespace Inkshift
 
         void FixedUpdate()
         {
+            if (drivingExit)
+                return;
+
             float dt = Time.fixedDeltaTime;
             Vector3 velocity = body.linearVelocity;
             Vector3 travel = body.position - previousPosition;

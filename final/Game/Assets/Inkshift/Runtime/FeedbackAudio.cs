@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Inkshift
 {
-    public enum SoundCue { Flip, Jump, AirJump, Land, Shift, Fall, Checkpoint, Clear }
+    public enum SoundCue { Flip, Jump, AirJump, Land, Shift, Fall, Checkpoint, Clear, Shutter }
 
     [RequireComponent(typeof(AudioSource))]
     public sealed class FeedbackAudio : MonoBehaviour
@@ -14,7 +14,8 @@ namespace Inkshift
 
         public void Play(SoundCue cue)
         {
-            AudioClip clip = cues[(int)cue];
+            int index = (int)cue;
+            AudioClip clip = cues != null && index < cues.Length ? cues[index] : null;
             if (clip)
                 speaker.PlayOneShot(clip);
         }

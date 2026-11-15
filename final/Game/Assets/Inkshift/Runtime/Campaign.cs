@@ -17,7 +17,7 @@ namespace Inkshift
             get
             {
                 for (int i = 0; i < Count; i++)
-                    if (BestTime(i) == 0f)
+                    if (!IsCleared(i))
                         return i;
                 return 0;
             }
@@ -29,15 +29,16 @@ namespace Inkshift
             {
                 int total = 0;
                 for (int i = 0; i < Count; i++)
-                    if (BestTime(i) > 0f)
+                    if (IsCleared(i))
                         total++;
                 return total;
             }
         }
 
-        public bool IsUnlocked(int index) => index == 0 || BestTime(index - 1) > 0f;
+        public bool IsUnlocked(int index) => index >= 0 && index < Count && (index == 0 || IsCleared(index - 1));
         public float BestTime(int index) => PlayerPrefs.GetFloat(TimeKey(index));
-        string TimeKey(int index) => $"inkshift.best.{stages[index].Id}";
+        public bool IsCleared(int index) => BestTime(index) > 0f || PlayerPrefs.GetFloat($"inkshift.best.{stages[index].Id}") > 0f;
+        string TimeKey(int index) => $"inkshift.best.lab-v2.{stages[index].Id}";
 
         public bool RecordClear(int index, float seconds)
         {

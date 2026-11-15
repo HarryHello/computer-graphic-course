@@ -13,6 +13,7 @@ namespace Inkshift
         [SerializeField] float turnDuration = 0.34f;
 
         Camera lens;
+        bool framingExit;
         Vector3 focus;
         Vector3 focusVelocity;
         float yaw;
@@ -26,6 +27,7 @@ namespace Inkshift
 
         public void Snap(int heading, Vector3 position)
         {
+            framingExit = false;
             Heading = (heading + 4) % 4;
             yaw = turnStart = turnTarget = Heading * 90f;
             turnElapsed = turnDuration;
@@ -43,8 +45,20 @@ namespace Inkshift
             turnElapsed = 0f;
         }
 
+        public void FrameExit(Vector3 threshold, Vector3 forward, Vector3 from, Quaternion rotation, float blend)
+        {
+            framingExit = true;
+            Vector3 position = threshold - forward * 7f + Vector3.up * 4.05f;
+            Quaternion facing = Quaternion.LookRotation(threshold + Vector3.up * 1.5f - position);
+            transform.SetPositionAndRotation(Vector3.Lerp(from, position, blend), Quaternion.Slerp(rotation, facing, blend));
+            lens.fieldOfView = Mathf.Lerp(lens.fieldOfView, fieldOfView, blend);
+        }
+
         void LateUpdate()
         {
+            if (framingExit)
+                return;
+
             float dt = Time.deltaTime;
             if (dt <= 0f)
                 return;
