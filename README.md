@@ -4,7 +4,7 @@
 
 ## 目录
 
-- `0000/`、`0001/`、`0002/` 等按编号存放平时作业。
+- `0000/`、`0001/`、`0002/`、[`0003/`](0003/docs/REQUEST.md) 等按编号存放平时作业。
 - [`midterm/`](midterm/README.md) 存放期中论文、作者代码和报告模板。
 - [`final/`](final/README.md) 存放期末项目资料与后续实现。
 - [`Report-Templates/`](Report-Templates/README.md) 存放通用报告模板。
