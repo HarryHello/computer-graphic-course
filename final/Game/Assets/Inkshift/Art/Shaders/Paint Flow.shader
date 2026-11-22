@@ -46,7 +46,8 @@ Shader "Hidden/Inkshift/Paint Flow"
                 float distanceFromImpact = length(away);
                 float2 radial = away * rsqrt(max(dot(away, away), 0.01));
                 float push = _Ripple.z * exp(-dot(away, away) * 1.42) * smoothstep(0.0, 0.22, distanceFromImpact);
-                float2 transport = (_Surface.zw + radial * push / _Surface.xy) * dt * before.b;
+                float upstreamWet = Field(uv - _Surface.zw * dt).b;
+                float2 transport = (_Surface.zw + radial * push / _Surface.xy) * dt * max(before.b, upstreamWet);
                 float2 sampleUV = uv - transport;
                 float2 step = abs(_MainTex_TexelSize.xy);
                 float3 centre = Field(sampleUV);
@@ -59,7 +60,13 @@ Shader "Hidden/Inkshift/Paint Flow"
                 float2 pigment = centre.rg + relaxation * (Flux(centre, left) + Flux(centre, right) +
                     Flux(centre, down) + Flux(centre, up));
                 float neighborWet = (left.b + right.b + down.b + up.b) * 0.25;
-                float wetness = saturate(lerp(centre.b, neighborWet, relaxation) - dt * 0.60);
+                float wetness = saturate(lerp(centre.b, neighborWet, relaxation) - dt * 0.32);
+
+                // Removing a fixed thickness preserves the local pigment ratio. Thin edges
+                // vanish first while overlapping deposits share one continuous pooled field.
+                pigment = max(pigment, 0.0);
+                float thickness = pigment.x + pigment.y;
+                pigment *= max(0.0, thickness - dt * 0.06) / max(thickness, 0.0001);
 
                 if (_Deposit.y > 0.0)
                 {
@@ -68,31 +75,14 @@ Shader "Hidden/Inkshift/Paint Flow"
                     float2 axis = end - start;
                     float t = saturate(dot(metres - start, axis) / max(dot(axis, axis), 0.00001));
                     float2 offset = metres - (start + t * axis);
-                    float radius = _Deposit.x + 0.047 * sin(dot(metres, float2(8.8, 5.3))) +
-                        0.026 * sin(dot(metres, float2(-15.0, 11.1)));
-
-                    float bead = 0.0;
-                    if (_Deposit.w > 0.0)
-                    {
-                        float angle = atan2(offset.y, offset.x + 0.0001);
-                        float phase = angle * 6.0 + dot(end, float2(2.3, 1.7));
-                        float lobes = 0.5 + 0.5 * sin(phase);
-                        float tongues = pow(lobes, 5.0);
-                        radius += _Deposit.w * (tongues * 0.24 + 0.038 * cos(angle * 9.0));
-                        float tip = radius + 0.14 + 0.075 * cos(angle * 3.0);
-                        bead = smoothstep(0.94, 0.997, lobes) * (1.0 - smoothstep(0.015, 0.055, abs(length(offset) - tip)));
-                        bead *= smoothstep(0.50, 0.85, _Deposit.w) * 0.82;
-                    }
-
-                    float brush = 1.0 - smoothstep(radius - 0.11, radius + 0.055, length(offset));
-                    brush = max(brush, bead);
-                    float fill = brush * _Deposit.y;
-                    pigment += float2(_Deposit.z, 1.0 - _Deposit.z) * fill;
+                    float radius = _Deposit.x + 0.025 * sin(dot(metres, float2(3.8, 2.3))) +
+                        0.014 * sin(dot(metres, float2(-7.0, 5.1)));
+                    float brush = 1.0 - smoothstep(radius - 0.16, radius + 0.055, length(offset));
+                    pigment += float2(_Deposit.z, 1.0 - _Deposit.z) * (brush * _Deposit.y);
                     wetness = max(wetness, brush);
                 }
 
-                // Preserve the pigment ratio when the pool reaches its maximum thickness.
-                pigment = max(pigment, 0.0);
+                // Keep the mixing ratio when a pool reaches its maximum thickness.
                 pigment *= min(1.0, 1.45 / max(pigment.x + pigment.y, 0.0001));
                 return float4(pigment, wetness, 1.0);
             }

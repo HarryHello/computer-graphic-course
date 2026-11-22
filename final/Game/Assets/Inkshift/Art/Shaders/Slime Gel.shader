@@ -18,6 +18,7 @@ Shader "Inkshift/Slime Gel"
         {
             Name "Translucent gel"
             Tags { "LightMode"="UniversalForward" }
+            Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
 
             HLSLPROGRAM
@@ -77,29 +78,34 @@ Shader "Inkshift/Slime Gel"
                 float3 n = normalize(input.normalWS);
                 float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float facing = saturate(dot(n, view));
-                float fresnel = pow(1.0 - facing, 3.0);
+                float fresnel = pow(1.0 - facing, 2.6);
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 float2 bend = TransformWorldToViewDir(n).xy * _Refraction * (0.53 + 0.47 * facing);
-                float3 background = SampleSceneColor(saturate(screenUV - bend));
-                float pigment = lerp(1.0, SAMPLE_TEXTURE2D(_Pattern, sampler_Pattern, input.uv).r, _PatternWeight);
+                // Add only the refracted difference; replacing the framebuffer with the
+                // opaque texture would erase wet paint already drawn behind the character.
+                float3 bent = SampleSceneColor(saturate(screenUV - bend));
+                float3 straight = SampleSceneColor(screenUV);
+                float pattern = lerp(1.0, 0.83 + 0.17 * SAMPLE_TEXTURE2D(_Pattern, sampler_Pattern, input.uv).r,
+                    _PatternWeight);
 
                 Light sun = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 float softLight = saturate(dot(n, sun.direction) * 0.5 + 0.5);
-                float light = 0.73 + 0.27 * softLight * sun.shadowAttenuation;
-                float density = lerp(0.35 + 0.20 * facing, 0.68 + 0.14 * facing, _PigmentDensity);
-                float3 body = lerp(background * lerp(float3(1, 1, 1), _Tint.rgb, 0.55), _Tint.rgb * light, density) * pigment;
+                float light = 0.70 + 0.30 * softLight * sun.shadowAttenuation;
+                float3 body = _Tint.rgb * light * pattern + (bent - straight) * 0.24;
                 float highlight = pow(saturate(dot(n, SafeNormalize(sun.direction + view))), 98.0) * sun.shadowAttenuation;
                 float sheen = pow(saturate(dot(n, SafeNormalize(float3(-0.44, 0.8, 0.40) + view))), 21.0);
-                float3 rim = lerp(_Tint.rgb, float3(0.84, 1, 1), lerp(0.43, 0.22, _PigmentDensity));
+                float3 rim = lerp(_Tint.rgb, float3(0.90, 1.0, 1.0), 0.42);
                 float3 diffuse, specular;
                 InkshiftLocalLighting(input.positionWS, screenUV, n, view, 78.0, diffuse, specular);
-                float3 color = lerp(body, rim, 0.58 * fresnel) + sun.color * highlight * 0.75 + sheen * lerp(0.17, 0.085, _PigmentDensity);
+                float3 color = body + rim * fresnel * 0.28 + sun.color * highlight * 0.70 + sheen * 0.12;
                 if (_RoomReflection > 0.0)
                 {
-                    float3 environment = GlossyEnvironmentReflection(reflect(-view, n), input.positionWS, 0.13, 1.0, screenUV);
-                    color += environment * _RoomReflection * (0.24 + 0.76 * fresnel);
+                    float3 environment = GlossyEnvironmentReflection(reflect(-view, n), input.positionWS, 0.17, 1.0, screenUV);
+                    color += environment * _RoomReflection * (0.12 + 0.46 * fresnel);
                 }
-                return half4(color + _Tint.rgb * diffuse * 0.16 + specular * 0.65, 1);
+                color += _Tint.rgb * diffuse * 0.17 + specular * 0.54;
+                float opacity = saturate(lerp(0.50, 0.68, _PigmentDensity) + 0.13 * fresnel);
+                return half4(max(color, 0.0), opacity);
             }
             ENDHLSL
         }

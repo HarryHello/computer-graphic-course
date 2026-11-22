@@ -10,11 +10,13 @@ Shader "Inkshift/Liquid Ink"
 
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest+15" "RenderType"="TransparentCutout" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent-10" "RenderType"="Transparent" }
         Pass
         {
             Name "Wet surface"
             Tags { "LightMode"="UniversalForward" }
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
 
             HLSLPROGRAM
             #pragma target 3.5
@@ -45,38 +47,74 @@ Shader "Inkshift/Liquid Ink"
             struct Attributes
             {
                 float3 positionOS : POSITION;
+                float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                float2 edge : TEXCOORD1;
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
-                float2 uv : TEXCOORD1;
-                half fog : TEXCOORD2;
+                float3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
+                float2 edge : TEXCOORD3;
+                half fog : TEXCOORD4;
             };
+
+            float3 State(float2 uv)
+            {
+                return SAMPLE_TEXTURE2D_LOD(_InkState, sampler_InkState, uv, 0).rgb;
+            }
 
             float Mass(float2 uv)
             {
-                return dot(SAMPLE_TEXTURE2D_LOD(_InkState, sampler_InkState, uv, 0).rg, float2(1.0, 1.0));
+                return dot(State(uv).rg, float2(1.0, 1.0));
+            }
+
+            // Edge skirts read the very same field as the top, so their pigment and lifetime stay joined.
+            float DripReach(float3 positionWS, float height, float wetness)
+            {
+                float along = dot(positionWS.xz, float2(5.9, 8.3));
+                float shape = 0.5 + 0.23 * sin(along) + 0.17 * sin(along * 0.43 + 1.7)
+                    + 0.10 * sin(along * 1.77 + 0.9);
+                float growth = lerp(1.0, 0.28, saturate(wetness));
+                return saturate((height - 0.045) * 1.45) * lerp(0.28, 1.0, saturate(shape)) * growth;
             }
 
             Varyings Vertex(Attributes input)
             {
                 Varyings output;
-                float3 up = TransformObjectToWorldNormal(float3(0, 1, 0));
-                output.positionWS = TransformObjectToWorld(input.positionOS) + up * min(Mass(input.uv), 1.0) * 0.042;
+                float3 normal = TransformObjectToWorldNormal(input.normalOS);
+                float3 basePosition = TransformObjectToWorld(input.positionOS);
+                float3 state = State(input.uv);
+                float height = state.x + state.y;
+                float raised = min(height, 1.0);
+                float edgeDepth = saturate(input.edge.x * 4.0);
+                float extrusion = raised * lerp(0.034, 0.015 * edgeDepth, input.edge.y);
+                float3 join = TransformObjectToWorldDir(float3(0, 1, 0)) *
+                    (input.edge.y * raised * 0.034 * (1.0 - edgeDepth));
+                output.positionWS = basePosition + normal * extrusion + join;
                 output.positionCS = TransformWorldToHClip(output.positionWS);
+                output.normalWS = normal;
                 output.uv = input.uv;
+                output.edge = input.edge;
                 output.fog = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
             half4 Fragment(Varyings input) : SV_Target
             {
-                float3 state = SAMPLE_TEXTURE2D(_InkState, sampler_InkState, input.uv).rgb;
+                float3 state = State(input.uv);
                 float height = state.x + state.y;
-                clip(height - 0.070);
+                clip(height - 0.008);
+                float edgeCoverage = 1.0;
+                if (input.edge.y > 0.5)
+                {
+                    float reach = DripReach(input.positionWS, height, state.z);
+                    edgeCoverage = 1.0 - smoothstep(reach - 0.035, reach + 0.035, input.edge.x);
+                    clip(edgeCoverage - 0.005);
+                }
 
                 float2 texel = abs(_InkState_TexelSize.xy);
                 float dx = Mass(input.uv + float2(texel.x, 0)) - Mass(input.uv - float2(texel.x, 0));
@@ -84,12 +122,14 @@ Shader "Inkshift/Liquid Ink"
                 float phase = dot(input.positionWS.xz, float2(8.7, 3.2)) + _Time.y * 2.1;
                 float crossWave = dot(input.positionWS.xz, float2(-5.1, 12.0)) - _Time.y * 1.35;
                 float wet = 0.45 + 0.55 * state.z;
-                float2 ripples = wet * float2(cos(phase) * 0.041 + sin(crossWave) * 0.024,
-                    cos(phase) * 0.021 + cos(crossWave) * 0.043);
-                float3 up = TransformObjectToWorldDir(float3(0, 1, 0));
-                float3 n = normalize(up -
+                float2 ripples = wet * float2(cos(phase) * 0.030 + sin(crossWave) * 0.018,
+                    cos(phase) * 0.016 + cos(crossWave) * 0.032);
+                float3 surfaceNormal = normalize(input.normalWS);
+                float3 n = normalize(surfaceNormal -
                     TransformObjectToWorldDir(float3(1, 0, 0)) * (dx * 2.45 + ripples.x) -
                     TransformObjectToWorldDir(float3(0, 0, 1)) * (dz * 2.45 + ripples.y));
+                if (input.edge.y > 0.5)
+                    n = normalize(surfaceNormal + TransformObjectToWorldDir(float3(0, 1, 0)) * ripples.y);
                 float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 float indoors = saturate(_RoomReflection * 2.0);
@@ -100,11 +140,11 @@ Shader "Inkshift/Liquid Ink"
                 float3 reflection = reflect(-view, n);
                 float skyGlint = pow(saturate(dot(reflection, normalize(float3(-0.28, 0.83, 0.49)))), 12.0);
                 float rim = pow(1.0 - saturate(dot(n, view)), 3.5);
-                float3 pigment = lerp(_Aqua.rgb, _Orange.rgb, state.x / height);
-                float pool = smoothstep(0.07, 0.28, height);
-                float meniscus = smoothstep(0.079, 0.19, height) * (1.0 - smoothstep(0.24, 0.55, height));
+                float3 pigment = lerp(_Aqua.rgb, _Orange.rgb, state.x / max(height, 0.0001));
+                float pool = smoothstep(0.04, 0.40, height);
+                float meniscus = smoothstep(0.035, 0.13, height) * (1.0 - smoothstep(0.24, 0.55, height));
                 float edgeLight = 0.35 + 0.65 * saturate(dot(n, normalize(float3(-0.61, 0.65, -0.38))));
-                float3 color = pigment * (0.54 + 0.53 * diffuse) * lerp(0.66, 1.0, pool);
+                float3 color = pigment * (0.62 + 0.45 * diffuse) * lerp(0.8, 1.0, pool);
                 color += sun.color * gloss * lerp(0.32, 1.05, wet);
                 color += (skyGlint * (0.09 + 0.13 * wet) + rim * 0.22) * float3(0.69, 0.84, 1.0) * lerp(1.0, 0.18, indoors);
                 color += meniscus * edgeLight * wet * lerp(float3(0.38, 0.45, 0.51), pigment * 0.26 + 0.025, indoors);
@@ -119,7 +159,8 @@ Shader "Inkshift/Liquid Ink"
                     float3 environment = GlossyEnvironmentReflection(reflection, input.positionWS, roughness, 1.0, screenUV);
                     color += environment * _RoomReflection * (0.18 + 0.72 * rim);
                 }
-                return half4(MixFog(color, input.fog), 1);
+                float opacity = smoothstep(0.008, 0.16, height) * lerp(0.28, 0.64, smoothstep(0.04, 1.0, height));
+                return half4(MixFog(color, input.fog), opacity * edgeCoverage);
             }
             ENDHLSL
         }
