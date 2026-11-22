@@ -49,6 +49,27 @@ DerivedData/
 *.swp
 *~
 
+# ===== Unity 期末项目缓存与本地设置（跨分支保留）=====
+/final/Game/[Ll]ibrary/
+/final/Game/[Tt]emp/
+/final/Game/[Oo]bj/
+/final/Game/[Bb]uild/
+/final/Game/[Bb]uilds/
+/final/Game/[Ll]ogs/
+/final/Game/[Uu]ser[Ss]ettings/
+/final/Game/MemoryCaptures/
+/final/Game/Recordings/
+/final/Game/*.csproj
+/final/Game/*.sln
+/final/Game/*.slnx
+/final/Game/*.user
+/final/Game/*.pidb
+/final/Game/*.pdb
+/final/Game/*.mdb
+/final/Game/*.opendb
+/final/Game/*.VC.db
+/final/Game/sysinfo.txt
+
 # ===== Python（辅助脚本用）=====
 __pycache__/
 *.py[cod]
