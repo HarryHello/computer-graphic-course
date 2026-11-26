@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace Inkshift
@@ -24,6 +25,7 @@ namespace Inkshift
         Label retryCount;
         VisualElement blackout;
         VisualElement routePips;
+        bool waitForSubmitRelease;
         public float Blackout { get; private set; }
 
         public void Bind(GameFlow gameFlow)
@@ -49,6 +51,25 @@ namespace Inkshift
             BindClick(pause, flow.Pause);
             BindClick(Get<Button>("quitButton"), flow.Quit);
             Visible("quitButton", !Application.isEditor);
+            Get<VisualElement>("dialog").RegisterCallback<NavigationSubmitEvent>(evt =>
+            {
+                if (waitForSubmitRelease)
+                    evt.StopImmediatePropagation();
+            }, TrickleDown.TrickleDown);
+        }
+
+        void Update()
+        {
+            if (waitForSubmitRelease && !SubmitHeld())
+                waitForSubmitRelease = false;
+        }
+
+        static bool SubmitHeld()
+        {
+            Keyboard keys = Keyboard.current;
+            Gamepad pad = Gamepad.current;
+            return (keys != null && (keys.spaceKey.isPressed || keys.enterKey.isPressed || keys.numpadEnterKey.isPressed))
+                || (pad != null && pad.buttonSouth.isPressed);
         }
 
         public void ShowTitle(Campaign campaign)
@@ -194,6 +215,7 @@ namespace Inkshift
                 result += "   /   NEW BEST";
             ShowDialog(status, complete ? "Run complete" : campaign[index].Title, result,
                 last ? "BACK TO TITLE" : "NEXT ROUTE", flow.Continue, "REPLAY ROUTE", !last);
+            waitForSubmitRelease = SubmitHeld();
         }
 
         void ShowDialog(string eyebrow, string title, string text, string action, System.Action callback, string replay, bool showTitleAction = true)
@@ -245,7 +267,11 @@ namespace Inkshift
             element.schedule.Execute(() => element.RemoveFromClassList("feedback-pulse")).StartingIn(140);
         }
 
-        public void CloseDialog() => Visible("dialog", false);
+        public void CloseDialog()
+        {
+            waitForSubmitRelease = false;
+            Visible("dialog", false);
+        }
         public void SetStageHudVisible(bool visible) => Visible("stageHud", visible);
         public void ShowLoadError() => Visible("loadError", true);
 

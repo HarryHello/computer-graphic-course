@@ -46,6 +46,7 @@ namespace Inkshift
             else
             {
                 hud.ShowTitle(campaign);
+                hud.SetMenuInput(false);
             }
             StartCoroutine(Arrive());
         }
@@ -58,6 +59,7 @@ namespace Inkshift
             if (stageIndex < 0)
             {
                 mode = Mode.Title;
+                hud.SetMenuInput(true);
                 hud.FocusTitle();
             }
             else
@@ -214,31 +216,32 @@ namespace Inkshift
         {
             player.AllowInput(false);
             hud.HideHint();
-            bool personalBest = campaign.RecordClear(stageIndex, elapsed);
             if (door)
             {
                 hud.SetStageHudVisible(false);
                 Vector3 from = player.BeginExit();
-                Vector3 cameraStart = view.transform.position;
-                Quaternion cameraRotation = view.transform.rotation;
+                view.BeginExitFrame();
                 Vector3 staging = door.StagingPosition;
                 Vector3 direction = staging - from;
                 int approachSteps = Mathf.RoundToInt(Vector3.ProjectOnPlane(direction, Vector3.up).magnitude);
                 yield return Animate(Mathf.Clamp(direction.magnitude / 4.8f, 0.32f, 0.7f), t =>
                 {
                     player.MoveThroughExit(Vector3.Lerp(from, staging, t), direction, approachSteps * t);
-                    view.FrameExit(door.transform.position, door.Forward, cameraStart, cameraRotation, t);
+                    view.FrameExit(door.transform.position, door.Forward, t);
                 });
                 player.SettleExitRoll();
                 audioFeedback.Play(SoundCue.Shutter);
                 yield return Animate(0.72f, door.SetOpenAmount);
                 Vector3 inside = door.InteriorPosition;
                 int entrySteps = Mathf.RoundToInt(Vector3.Distance(staging, inside));
-                yield return Animate(1.15f, t => player.MoveThroughExit(Vector3.Lerp(staging, inside, t),
-                    door.Forward, entrySteps * t));
-
+                yield return Animate(1.15f, t =>
+                {
+                    player.MoveThroughExit(Vector3.Lerp(staging, inside, t), door.Forward, entrySteps * t);
+                    view.FrameExit(door.transform.position, door.Forward, 1f, t);
+                });
             }
 
+            bool personalBest = campaign.RecordClear(stageIndex, elapsed);
             audioFeedback.Play(SoundCue.Clear);
             mode = Mode.Cleared;
             Time.timeScale = 0f;

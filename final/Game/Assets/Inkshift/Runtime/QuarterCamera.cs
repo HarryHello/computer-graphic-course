@@ -14,6 +14,9 @@ namespace Inkshift
 
         Camera lens;
         bool framingExit;
+        Vector3 exitStart;
+        Quaternion exitRotation;
+        float exitFieldOfView;
         Vector3 focus;
         Vector3 focusVelocity;
         float yaw;
@@ -45,13 +48,21 @@ namespace Inkshift
             turnElapsed = 0f;
         }
 
-        public void FrameExit(Vector3 threshold, Vector3 forward, Vector3 from, Quaternion rotation, float blend)
+        public void BeginExitFrame()
         {
             framingExit = true;
-            Vector3 position = threshold - forward * 7f + Vector3.up * 4.05f;
-            Quaternion facing = Quaternion.LookRotation(threshold + Vector3.up * 1.5f - position);
-            transform.SetPositionAndRotation(Vector3.Lerp(from, position, blend), Quaternion.Slerp(rotation, facing, blend));
-            lens.fieldOfView = Mathf.Lerp(lens.fieldOfView, fieldOfView, blend);
+            exitStart = transform.position;
+            exitRotation = transform.rotation;
+            exitFieldOfView = lens.fieldOfView;
+        }
+
+        public void FrameExit(Vector3 threshold, Vector3 forward, float blend, float entry = 0f)
+        {
+            Vector3 position = threshold - forward * (7f - 0.75f * entry) + Vector3.up * 4.05f;
+            Vector3 aim = threshold + forward * (1.25f * entry) + Vector3.up * 1.5f;
+            Quaternion facing = Quaternion.LookRotation(aim - position);
+            transform.SetPositionAndRotation(Vector3.Lerp(exitStart, position, blend), Quaternion.Slerp(exitRotation, facing, blend));
+            lens.fieldOfView = Mathf.Lerp(exitFieldOfView, Mathf.Min(fieldOfView, 52f), blend);
         }
 
         void LateUpdate()

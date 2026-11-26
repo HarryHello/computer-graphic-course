@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 
 namespace Inkshift
 {
-    [DefaultExecutionOrder(20)]
+    [DefaultExecutionOrder(110)]
     public sealed class PaintTrail : MonoBehaviour
     {
         [SerializeField] ShapeMotor player;
@@ -142,9 +142,6 @@ namespace Inkshift
                     continue;
                 }
 
-                if (surface.VisibilitySource)
-                    surface.Renderer.enabled = surface.VisibilitySource.enabled;
-
                 float interval = now - surface.LastDeposit < ActiveTime ? ActiveInterval : FadingInterval;
                 if (now - surface.LastStep >= interval)
                     Step(surface, now, Vector4.zero, Vector4.zero);
@@ -160,6 +157,13 @@ namespace Inkshift
                 Release(surface);
                 surfaces.Remove(key);
             }
+        }
+
+        void LateUpdate()
+        {
+            foreach (Surface surface in surfaces.Values)
+                if (surface.VisibilitySource)
+                    surface.Renderer.enabled = surface.VisibilitySource.enabled;
         }
 
         void DepositGround(float now)

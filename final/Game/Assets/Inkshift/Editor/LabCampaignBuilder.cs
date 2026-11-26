@@ -26,20 +26,50 @@ public static class LabCampaignBuilder
     static int platformCount, checkpointCount;
     static readonly List<Vector3> route = new();
 
-    [MenuItem("Inkshift/Rebuild laboratory campaign")]
-    public static void RebuildCampaign()
+    [MenuItem("Inkshift/Rebuild laboratory campaign (all scenes)")]
+    public static void RebuildCampaign() => Rebuild(new[] { 0, 1, 2, 3 }, true, true);
+
+    [MenuItem("Inkshift/Rebuild remaining laboratory routes and title")]
+    public static void RebuildRemainingRoutes() => Rebuild(new[] { 1, 2, 3 }, true, true);
+
+    [MenuItem("Inkshift/Rebuild route/First Marks")]
+    public static void RebuildFirstMarks() => Rebuild(new[] { 0 }, false, false);
+
+    [MenuItem("Inkshift/Rebuild route/Slipstream")]
+    public static void RebuildSlipstream() => Rebuild(new[] { 1 }, false, false);
+
+    [MenuItem("Inkshift/Rebuild route/Quarter Turn")]
+    public static void RebuildQuarterTurn() => Rebuild(new[] { 2 }, false, false);
+
+    [MenuItem("Inkshift/Rebuild route/Transfer Wing")]
+    public static void RebuildTransferWing() => Rebuild(new[] { 3 }, false, false);
+
+    [MenuItem("Inkshift/Rebuild laboratory title")]
+    public static void RebuildTitle() => Rebuild(Array.Empty<int>(), true, false);
+
+    static void Rebuild(int[] stages, bool title, bool campaign)
     {
-        if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().isDirty)
-            throw new InvalidOperationException("Stop Play mode and save the current scene before rebuilding.");
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("Stop Play mode before rebuilding.");
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+            if (SceneManager.GetSceneAt(i).isDirty)
+                throw new InvalidOperationException("Save all open scenes before rebuilding.");
+
+        foreach (int index in stages)
+            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(SceneDir + Scenes[index] + ".unity"))
+                throw new InvalidOperationException("Missing route scene " + Scenes[index] + ".");
+        if (title && !AssetDatabase.LoadAssetAtPath<SceneAsset>(SceneDir + "InkshiftTitle.unity"))
+            throw new InvalidOperationException("Missing title scene.");
 
         MakeMaterials();
         arrow = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Inkshift/Art/Route arrow.asset");
+        if (!arrow) throw new InvalidOperationException("The route arrow mesh has not been imported.");
         puddle = MakePuddleMesh();
-        for (int i = 0; i < Scenes.Length; i++) BuildStage(i);
-        BuildTitle();
-        UpdateCampaign();
+        foreach (int index in stages) BuildStage(index);
+        if (title) BuildTitle();
+        if (campaign) UpdateCampaign();
         AssetDatabase.SaveAssets();
-        Debug.Log("Laboratory campaign rebuilt and saved. Use Inkshift/Validate laboratory routes for checks.");
+        Debug.Log("Selected laboratory scenes rebuilt and saved. Use Inkshift/Validate laboratory routes for checks.");
     }
 
     static void BuildStage(int index)
@@ -63,7 +93,7 @@ public static class LabCampaignBuilder
         guide = Group("Route Guide (ordered test anchors)", null, Vector3.zero);
         guideIndex = platformCount = checkpointCount = 0;
         route.Clear();
-        float far = index == 3 ? 88f : 75f;
+        float far = index == 3 ? 88f : index == 1 ? 81f : 75f;
         float centreX = new[] { 5f, 2f, -1.5f, 1f }[index];
         float halfWidth = new[] { 15f, 18f, 22f, 19.5f }[index];
         BuildRoom(lab, camera.transform, centreX, halfWidth, -10f, far, index);
@@ -86,11 +116,12 @@ public static class LabCampaignBuilder
         int missed = CheckAnchors(false);
         float distance = 0;
         for (int i = 1; i < route.Count; i++) distance += Vector3.Distance(route[i - 1], route[i]);
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
         Debug.Log($"{scene.name}: {platformCount} traversable surfaces, {checkpointCount} checkpoints, " +
                   $"{distance:F0} m between ordered anchors, {missed} anchors without a supporting surface.");
         if (missed != 0) throw new InvalidOperationException(scene.name + " has unsupported route anchors.");
+        EditorSceneManager.MarkSceneDirty(scene);
+        if (!EditorSceneManager.SaveScene(scene))
+            throw new InvalidOperationException("Could not save " + scene.name + ".");
     }
 
     static void ConfigureLook(ShapeMotor player, QuarterCamera camera, PaintTrail ink, int index)
@@ -157,7 +188,7 @@ public static class LabCampaignBuilder
         Ramp("Downhill", V(-9, 0, 15), V(-9, -2, 23), 5);
         Deck("Valley", -9, -2, 24.5f, 5, 3); Way(-9, -2, 24.5f, 0, true, 0, "hold speed in valley");
         Ramp("First launch", V(-9, -2, 26), V(-9, 1.5f, 34), 5);
-        Deck("Launch landing", -9, 0, 39, 6, 7); Way(-9, 0, 39, 0, true, 0, "ride the ramp to the landing");
+        Deck("Launch landing", -9, 0, 39, 6, 6); Way(-9, 0, 39, 0, true, 0, "ride the ramp to the landing");
         Deck("Brake platform", -9, 0, 45, 6, 6); Checkpoint(-9, 0, 45, 1, 2, "Switch to cube to stop, then turn right.");
         Arrow(-7.5f, 0, 45, 1, false); Way(-8, 0, 45, 1, false, 0, "brake and turn east");
         Deck("Brake beam", -3, 0, 45, 6, 1.8f); Way(-3, 0, 45, 1, false, 0, "cross beam");
@@ -167,8 +198,8 @@ public static class LabCampaignBuilder
         Arrow(13, 0, 46.5f, 0, false); Way(13, 0, 46, 0, true, 0, "turn north and accelerate");
         Deck("Second runway", 13, 0, 52, 4.8f, 8); Way(13, 0, 53, 0, true, 0, "keep speed");
         Ramp("Second launch", V(13, 0, 56), V(13, 1.8f, 63), 4.8f);
-        Deck("Exit corridor", 13, 0, 69, 5.2f, 10); Way(13, 0, 68, 0, true, 0, "land and enter corridor");
-        Exit(13, 0, 71.5f, 0, true);
+        Deck("Exit corridor", 13, 0, 70.5f, 5.2f, 13); Way(13, 0, 68, 0, true, 0, "land and enter corridor");
+        Exit(13, 0, 74.5f, 0, true);
     }
 
     static void QuarterTurn()
@@ -190,7 +221,7 @@ public static class LabCampaignBuilder
         foreach (float x in new[] { 4f, -1f, -6f }) { Deck("West stone", x, 0, 32, 3.2f, 3.2f); Way(x, 0, 32, 3, false, 1, "jump west"); }
         Deck("South junction", -12, 0, 32, 8, 7); Checkpoint(-12, 0, 32, 2, 2, "Turn around: the route continues south.");
         Arrow(-12, 0, 30.5f, 2, false); Way(-12, 0, 30.5f, 2, false, 0, "turn south");
-        Deck("South beam", -12, 0, 25.8f, 1.8f, 5.5f); Way(-12, 0, 25.8f, 2, false, 0, "cross south beam");
+        Deck("South beam", -12, 0, 25.8f, 1.8f, 5.4f); Way(-12, 0, 25.8f, 2, false, 0, "cross south beam");
         Deck("South stone", -12, 0, 20, 3.2f, 3.2f); Way(-12, 0, 20, 2, false, 1, "jump south");
         Arrow(-12.5f, 0, 20, 3, false); Way(-12.5f, 0, 20, 3, false, 0, "turn west");
         Deck("Return junction", -18, 0, 20, 6, 6); Checkpoint(-18, 0, 20, 0, 3, "Face north for the outer return.");
@@ -202,7 +233,7 @@ public static class LabCampaignBuilder
         Deck("Final junction", -18, 0, 45, 6, 7); Arrow(-16.5f, 0, 45, 1, false); Way(-17, 0, 45, 1, false, 0, "turn east");
         Deck("Final east beam", -13, 0, 45, 4, 1.8f); Way(-13, 0, 45, 1, false, 0, "cross east");
         Deck("Final stone A", -9, 0, 45, 3.2f, 3.2f); Way(-9, 0, 45, 1, false, 1, "jump");
-        Deck("Final stone B", -4, 0, 45, 3.2f, 3.2f); Way(-4, 0, 45, 1, false, 1, "jump");
+        Deck("Final stone B", -4.1f, 0, 45, 3.2f, 3.2f); Way(-4.1f, 0, 45, 1, false, 1, "jump");
         Deck("Exit approach", 0, 0, 45, 5, 6); Arrow(0, 0, 46.5f, 0, false); Way(0, 0, 46, 0, false, 0, "turn north");
         Deck("Exit stone A", 0, 0, 51.2f, 3.4f, 3); Way(0, 0, 51.2f, 0, false, 1, "jump");
         Deck("Exit stone B", 0, 0, 56, 3.4f, 3); Way(0, 0, 56, 0, false, 1, "jump");
@@ -215,24 +246,24 @@ public static class LabCampaignBuilder
         Barrier("Transfer paint wall", -2.9f, 0, 0, .25f, 2.5f, 6);
         Way(0, 0, 0, 0, false, 0, "head north");
         Deck("Precision beam", 0, 0, 8, 1.65f, 8); Way(0, 0, 10, 0, false, 0, "cross beam");
-        Deck("Transfer stone A", 0, 0, 15.5f, 3.2f, 3); Way(0, 0, 15.5f, 0, false, 2, "double jump");
-        Deck("Transfer stone B", 1.8f, 0, 20.2f, 3.2f, 3.2f); Way(1.8f, 0, 20.2f, 0, false, 1, "jump and steer");
-        Deck("Transfer rest", 2, 0, 25.5f, 6, 7); Checkpoint(2, 0, 25.5f, 1, 1, "Turn right, then prepare to build ball speed.");
+        Deck("Transfer stone A", 0, 0, 18, 3.2f, 3); Way(0, 0, 18, 0, false, 2, "double jump");
+        Deck("Transfer stone B", 1.8f, 0, 22, 3.2f, 3.2f); Way(1.8f, 0, 22, 0, false, 1, "jump and steer");
+        Deck("Transfer rest", 2, 0, 25.5f, 6, 3.8f); Checkpoint(2, 0, 25.5f, 1, 1, "Turn right, then prepare to build ball speed.");
         Arrow(3.5f, 0, 25.5f, 1, false); Way(3, 0, 25.5f, 1, false, 0, "turn east");
         Deck("Transfer beam", 8, 0, 25.5f, 6, 1.8f); Way(8, 0, 25.5f, 1, false, 0, "cross beam");
         Deck("Runway turn", 14, 0, 25.5f, 6, 7); Arrow(14, 0, 27.3f, 0, false); Way(14, 0, 27, 0, true, 0, "turn north, switch to ball");
         Deck("Transfer runway", 14, 0, 34, 5, 10); Way(14, 0, 36, 0, true, 0, "accelerate");
         Ramp("Transfer launch", V(14, 0, 39), V(14, 2, 47), 5);
-        Deck("Transfer landing", 14, 0, 51.5f, 6, 7); Way(14, 0, 51.5f, 0, true, 0, "land from ramp");
-        Deck("Switchback rest", 14, 0, 56, 6, 5); Checkpoint(14, 0, 56, 3, 2, "Switch to cube to stop, then turn west.");
-        Arrow(12.5f, 0, 56, 3, false); Way(13, 0, 56, 3, false, 0, "brake and turn west");
-        foreach (float x in new[] { 9f, 4f, -1f, -6f }) { Deck("Switchback stone", x, 0, 56, 3.4f, 3.4f); Way(x, 0, 56, 3, false, 1, "jump west"); }
-        Deck("Climb rest", -11.5f, 0, 56, 7, 7); Checkpoint(-11.5f, 0, 56, 0, 3, "The final platforms rise; use the second jump if needed.");
-        Arrow(-11.5f, 0, 57.5f, 0, false); Way(-11.5f, 0, 57, 0, false, 0, "turn north");
+        Deck("Transfer landing", 14, 0, 51.5f, 6, 5); Way(14, 0, 51.5f, 0, true, 0, "land from ramp");
+        Deck("Switchback rest", 14, 0, 56.5f, 6, 5); Checkpoint(14, 0, 56.5f, 3, 2, "Switch to cube to stop, then turn west.");
+        Arrow(12.5f, 0, 56.5f, 3, false); Way(13, 0, 56.5f, 3, false, 0, "brake and turn west");
+        foreach (float x in new[] { 9f, 4f, -1f, -6f }) { Deck("Switchback stone", x, 0, 56.5f, 3.4f, 3.4f); Way(x, 0, 56.5f, 3, false, 1, "jump west"); }
+        Deck("Climb rest", -11.5f, 0, 56.5f, 7, 7); Checkpoint(-11.5f, 0, 56.5f, 0, 3, "The final platforms rise; use the second jump if needed.");
+        Arrow(-11.5f, 0, 58, 0, false); Way(-11.5f, 0, 57.5f, 0, false, 0, "turn north");
         Deck("Climb A", -11.5f, .7f, 62, 3.4f, 3); Way(-11.5f, .7f, 62, 0, false, 1, "jump up");
         Deck("Climb B", -11.5f, 1.4f, 66.2f, 3.4f, 3); Way(-11.5f, 1.4f, 66.2f, 0, false, 1, "jump up");
         Deck("Climb C", -11.5f, 2.1f, 70.4f, 3.4f, 3); Way(-11.5f, 2.1f, 70.4f, 0, false, 1, "jump up");
-        Deck("Exit corridor", -11.5f, 2.1f, 77.2f, 5.2f, 10); Way(-11.5f, 2.1f, 76, 0, false, 1, "enter corridor"); Exit(-11.5f, 2.1f, 79.5f, 0);
+        Deck("Exit corridor", -11.5f, 2.1f, 77.2f, 5.2f, 9.6f); Way(-11.5f, 2.1f, 76, 0, false, 1, "enter corridor"); Exit(-11.5f, 2.1f, 79.5f, 0);
     }
 
     static void Deck(string name, float x, float top, float z, float width, float length)
@@ -242,6 +273,14 @@ public static class LabCampaignBuilder
         deck.GetComponent<MeshFilter>().sharedMesh = BeveledDeck(width, length);
         deck.GetComponent<MeshRenderer>().sharedMaterials = new[] { materials["Deck"], materials["Steel"] };
         // Restrained edge lights keep narrow surfaces legible against the dark service pit.
+        if (width < 2.5f && length >= 4f)
+            foreach (int side in new[] { -1, 1 })
+                Block("Beam edge light", course, V(x + side * (width * .5f - .09f), top + .012f, z),
+                    V(.04f, .012f, length - .4f), materials["Cyan"], false);
+        else if (length < 2.5f && width >= 4f)
+            foreach (int side in new[] { -1, 1 })
+                Block("Beam edge light", course, V(x, top + .012f, z + side * (length * .5f - .09f)),
+                    V(width - .4f, .012f, .04f), materials["Cyan"], false);
         if (width >= 2.5f && length >= 3f)
         {
             float near = Math.Min(length * .26f, 1.5f);
@@ -317,6 +356,11 @@ public static class LabCampaignBuilder
     {
         var root = Group("Finish door", markers, V(x, y, z));
         root.rotation = Quaternion.Euler(0, heading * 90, 0);
+        // Continue the floor behind the shutter so the ending leads into a real vestibule.
+        Block("Vestibule floor", root, V(0, -.24f, 4f), V(5.2f, .48f, 3f), materials["Deck"], true);
+        foreach (int side in new[] { -1, 1 })
+            Block("Vestibule side", root, V(side * 2.5f, 1.7f, 4f), V(.2f, 3.4f, 3f), materials["Panel"], true);
+        Block("Vestibule back", root, V(0, 1.7f, 5.45f), V(5.2f, 3.4f, .18f), materials["Panel"], true);
         Block("Left jamb", root, V(-1.87f, 1.7f, 0), V(.45f, 3.4f, .55f), materials["Frame"], true);
         Block("Right jamb", root, V(1.87f, 1.7f, 0), V(.45f, 3.4f, .55f), materials["Frame"], true);
         Block("Overhead shutter housing", root, V(0, 5.12f, .03f), V(4.2f, 3.5f, .72f), materials["Frame"], false);
@@ -518,13 +562,17 @@ public static class LabCampaignBuilder
         materials["Pit"] = Lit("Damp service floor", new Color(.22f, .31f, .35f), .9f, .2f, deck, V2(12, 22), true);
         var damp = AssetDatabase.LoadAssetAtPath<Texture2D>(Art + "/Textures/Damp Patch.png");
         if (!damp) throw new InvalidOperationException("Damp patch texture has not been imported.");
+        bool newPool = !Existing("Standing water");
         materials["Pool"] = Lit("Standing water", new Color(.55f, .68f, .72f, .72f), .96f, .18f, damp, Vector2.one, false);
         var pool = materials["Pool"];
-        pool.SetFloat("_Surface", 1); pool.SetFloat("_Blend", 0);
-        pool.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); pool.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-        pool.SetFloat("_ZWrite", 0); pool.SetOverrideTag("RenderType", "Transparent");
-        pool.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); pool.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        pool.renderQueue = 2970; pool.SetShaderPassEnabled("ShadowCaster", false); EditorUtility.SetDirty(pool);
+        if (newPool)
+        {
+            pool.SetFloat("_Surface", 1); pool.SetFloat("_Blend", 0);
+            pool.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); pool.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            pool.SetFloat("_ZWrite", 0); pool.SetOverrideTag("RenderType", "Transparent");
+            pool.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); pool.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            pool.renderQueue = 2970; pool.SetShaderPassEnabled("ShadowCaster", false); EditorUtility.SetDirty(pool);
+        }
         materials["Frame"] = Existing("LabFrame");
         materials["Steel"] = Existing("LabSteel");
         materials["Rubber"] = Existing("LabRubber");
@@ -538,11 +586,11 @@ public static class LabCampaignBuilder
     {
         string path = Art + "/Materials/" + name + ".mat";
         var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (!material)
-        {
-            material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = name };
-            AssetDatabase.CreateAsset(material, path);
-        }
+        if (material) return material;
+        var shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (!shader) throw new InvalidOperationException("Universal Render Pipeline/Lit shader is unavailable.");
+        material = new Material(shader) { name = name };
+        AssetDatabase.CreateAsset(material, path);
         material.SetColor("_BaseColor", color); material.SetFloat("_Smoothness", smoothness); material.SetFloat("_Metallic", metallic);
         material.SetTexture("_BaseMap", texture); material.SetTextureScale("_BaseMap", tiling);
         material.SetFloat("_SmoothnessTextureChannel", alphaSmoothness ? 1 : 0);
@@ -683,21 +731,31 @@ public static class LabCampaignBuilder
         var camera = Camera.main;
         var gameFlow = Object.FindFirstObjectByType<GameFlow>();
         if (!exhibit || !camera || !gameFlow) throw new InvalidOperationException("Title scene is missing its exhibit, camera or flow.");
+        var cubeExhibit = exhibit.transform.Find("Cube exhibit");
+        var ballExhibit = exhibit.transform.Find("Ball exhibit");
+        var titleCube = cubeExhibit ? cubeExhibit.GetComponentInChildren<MeshRenderer>(true) : null;
+        var titleBall = ballExhibit ? ballExhibit.GetComponentInChildren<MeshRenderer>(true) : null;
+        if (!titleCube || !titleBall) throw new InvalidOperationException("Title scene is missing a shape exhibit.");
         var keep = new HashSet<GameObject> { exhibit.transform.root.gameObject, camera.transform.root.gameObject, gameFlow.transform.root.gameObject };
         foreach (var root in scene.GetRootGameObjects()) if (!keep.Contains(root)) Object.DestroyImmediate(root);
         var discard = new List<GameObject>();
+        var oldDisplay = new HashSet<string> { "Far pier", "Display plinth", "Route arrow", "Laboratory display",
+            "Exhibit plinth", "Edge light", "Steel underframe", "PlatformTrestle", "Support pier", "Damp patch" };
         foreach (Transform child in exhibit.transform)
-            if (child.name == "Far pier" || child.name == "Display plinth" || child.name == "Route arrow") discard.Add(child.gameObject);
+            if (oldDisplay.Contains(child.name)) discard.Add(child.gameObject);
         foreach (var item in discard) Object.DestroyImmediate(item);
-        var titleCube = exhibit.transform.Find("Cube exhibit").GetComponentInChildren<MeshRenderer>(true);
-        var titleBall = exhibit.transform.Find("Ball exhibit").GetComponentInChildren<MeshRenderer>(true);
-        if (titleCube) titleCube.sharedMaterial = Existing("Lab gel amber");
-        if (titleBall) titleBall.sharedMaterial = Existing("Lab gel aqua");
-        course = exhibit.transform; platformCount = 0;
+        titleCube.sharedMaterial = Existing("Lab gel amber");
+        titleBall.sharedMaterial = Existing("Lab gel aqua");
+        course = Group("Laboratory display", exhibit.transform, Vector3.zero); platformCount = 0;
         Deck("Exhibit plinth", 3.3f, -.4f, .5f, 6, 8);
         var lab = Group("Laboratory backdrop", null, Vector3.zero);
         BuildRoom(lab, camera.transform, 0, 12, -11, 19, 0);
-        EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene);
+        Block("Gallery floor", lab, V(0, -1.19f, 4), V(23.6f, .3f, 29.6f), materials["Pit"], false);
+        Pool(lab, V(-4.5f, -1.036f, 4), V(2.6f, 1, 3.2f), 31);
+        Pool(lab, V(7.8f, -1.036f, 8), V(3.2f, 1, 2.4f), 97);
+        EditorSceneManager.MarkSceneDirty(scene);
+        if (!EditorSceneManager.SaveScene(scene))
+            throw new InvalidOperationException("Could not save " + scene.name + ".");
     }
 
     static void UpdateCampaign()
@@ -774,7 +832,8 @@ public static class LabCampaignBuilder
             var landingMarker = Group("LANDING (aim inside edge)", destination, Vector3.zero); landingMarker.position = landing;
             float gap = Vector2.Distance(V2(takeoff.x, takeoff.z), V2(landing.x, landing.z));
             float rise = landing.y - takeoff.y;
-            if (gap > 4.0f || rise > 1.3f)
+            float suggestedLimit = destination.name.Contains(" | J2 | ") ? 5.7f : 4.0f;
+            if (gap > suggestedLimit || rise > 1.3f)
                 Debug.LogWarning($"Review {destination.name}: {gap:F2} m between inset markers, rise {rise:F2} m.", destination);
         }
     }

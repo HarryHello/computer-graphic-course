@@ -37,8 +37,15 @@ namespace Inkshift
 
         public bool IsUnlocked(int index) => index >= 0 && index < Count && (index == 0 || IsCleared(index - 1));
         public float BestTime(int index) => PlayerPrefs.GetFloat(TimeKey(index));
-        public bool IsCleared(int index) => BestTime(index) > 0f || PlayerPrefs.GetFloat($"inkshift.best.{stages[index].Id}") > 0f;
-        string TimeKey(int index) => $"inkshift.best.lab-v2.{stages[index].Id}";
+        public bool IsCleared(int index)
+        {
+            string id = stages[index].Id;
+            return BestTime(index) > 0f
+                || PlayerPrefs.GetFloat($"inkshift.best.lab-v2.{id}") > 0f
+                || PlayerPrefs.GetFloat($"inkshift.best.{id}") > 0f;
+        }
+
+        string TimeKey(int index) => $"inkshift.best.lab-v3.{stages[index].Id}";
 
         public bool RecordClear(int index, float seconds)
         {

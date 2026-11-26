@@ -18,23 +18,23 @@ MonoBehaviour:
     Scene: FirstMarks
     Title: First Marks
     Focus: CUBE STEPS   /   DOUBLE JUMP
-    Brief: Tap W to flip one cube length. Hold W to link steps. Press Tab to roll
-      as a ball.
+    Brief: Flip one cube length at a time. Jump between stones, and use Q / E to
+      turn at the junctions.
   - Id: slipstream
     Scene: Slipstream
     Title: Slipstream
     Focus: BALL SPEED   /   RAMP FLIGHT
-    Brief: Hold W through the dip to build ball speed. Aim for the orange launch
-      stripes.
+    Brief: Switch to ball and build speed through the dip. Switch back to cube to
+      brake at the next station.
   - Id: quarter-turn
     Scene: QuarterTurn
     Title: Quarter Turn
-    Focus: CAMERA TURNS   /   OFFSET LANDINGS
-    Brief: Follow the blue arrows. Press E for a right turn and Q for a left turn,
-      then keep moving with W.
+    Focus: FOUR HEADINGS   /   TURNING
+    Brief: Follow the arrows through all four headings. Q and E turn the camera;
+      W follows its new direction.
   - Id: cloudline
     Scene: Cloudline
-    Title: The Cloudline
-    Focus: FULL ROUTE   /   HIGH LANDINGS
-    Brief: Cross the beam, take the ramp, then climb the steps. Switch shape when
-      the route changes.
+    Title: Transfer Wing
+    Focus: FULL ROUTE   /   RISING PLATFORMS
+    Brief: Cross the beams, take the ball ramp, then brake and climb. Choose the
+      shape that suits each section.
