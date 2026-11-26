@@ -41,8 +41,7 @@ bool WindowsApp::setup(int width, int height, std::string title)
 
 	//Get window surface
 	m_screen_surface = SDL_GetWindowSurface(m_window_handle);
-
-	return true;
+	return m_screen_surface != nullptr;
 }
 
 WindowsApp::~WindowsApp()
@@ -112,9 +111,10 @@ void WindowsApp::updateScreenSurface(const std::vector<std::vector<color>> &canv
 	int width = canvas[0].size();
 	SDL_LockSurface(m_screen_surface);
 	{
-		Uint32* destPixels = (Uint32*)m_screen_surface->pixels;
 		for (int j = 0; j < height; ++j)
 		{
+			auto* destPixels = reinterpret_cast<Uint32*>(
+				static_cast<Uint8*>(m_screen_surface->pixels) + (height - 1 - j) * m_screen_surface->pitch);
 			for (int i = 0; i < width; ++i)
 			{
 				const auto &pixel = canvas[j][i];
@@ -124,7 +124,7 @@ void WindowsApp::updateScreenSurface(const std::vector<std::vector<color>> &canv
 					static_cast<uint8_t>(pixel[0] * 255),
 					static_cast<uint8_t>(pixel[1] * 255),
 					static_cast<uint8_t>(pixel[2] * 255));
-				destPixels[(height - 1 - j) * width + i] = color;
+				destPixels[i] = color;
 			}
 		}
 	}

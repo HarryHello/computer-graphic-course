@@ -20,105 +20,151 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.*/
 
-#include <array>
-#include <vector>
-#include <thread>
-#include <iostream>
-
+#include "Renderer.h"
 #include "WindowsApp.h"
-#include "vec3.h"
 
-static std::vector<std::vector<color>> gCanvas;		//Canvas
+#include <atomic>
+#include <exception>
+#include <iomanip>
+#include <iostream>
+#include <mutex>
+#include <stdexcept>
+#include <thread>
 
-// The width and height of the screen
-const auto aspect_ratio = 16.0 / 9.0;
-const int gWidth = 800;
-const int gHeight = static_cast<int>(gWidth / aspect_ratio);
-
-void rendering();
-
-int main(int argc, char* args[])
+static void usage()
 {
-	// Create window app handle
-	WindowsApp::ptr winApp = WindowsApp::getInstance(gWidth, gHeight, "CGAssignment3: Ray Tracing");
-	if (winApp == nullptr)
-	{
-		std::cerr << "Error: failed to create a window handler" << std::endl;
-		return -1;
-	}
-
-	// Memory allocation for canvas
-	gCanvas.resize(gHeight, std::vector<color>(gWidth));
-
-	// Launch the rendering thread
-	// Note: we run the rendering task in another thread to avoid GUI blocking
-	std::thread renderingThread(rendering);
-
-	// Window app loop
-	while (!winApp->shouldWindowClose())
-	{
-		// Process event
-		winApp->processEvent();
-
-		// Display to the screen
-		winApp->updateScreenSurface(gCanvas);
-
-	}
-
-	renderingThread.join();
-
-	return 0;
+    std::cout << "CGAssignment3 [--scene name] [--output file.png]\n"
+              << "Scenes: sky sphere materials defocus random motion textures noise image light cornell smoke final\n"
+              << "Options: --width N --height N --samples N --depth N --seed N --threads N\n"
+              << "         --no-bvh --aperture X --shutter X (0..1)\n";
 }
 
-void write_color(int x, int y, color pixel_color)
+static RenderOptions parse(int argc, char** argv)
 {
-	// Out-of-range detection
-	if (x < 0 || x >= gWidth)
-	{
-		std::cerr << "Warnning: try to write the pixel out of range: (x,y) -> (" << x << "," << y << ")" << std::endl;
-		return;
-	}
-
-	if (y < 0 || y >= gHeight)
-	{
-		std::cerr << "Warnning: try to write the pixel out of range: (x,y) -> (" << x << "," << y << ")" << std::endl;
-		return;
-	}
-
-	// Note: x -> the column number, y -> the row number
-	gCanvas[y][x] = pixel_color;
-
+    RenderOptions options;
+    bool explicitHeight = false;
+    for (int i = 1; i < argc; ++i)
+    {
+        const std::string name = argv[i];
+        if (name == "--no-bvh")
+        {
+            options.bvh = false;
+            continue;
+        }
+        if (i + 1 == argc)
+            throw std::invalid_argument("Missing value for " + name);
+        const std::string value = argv[++i];
+        if (name == "--scene") options.scene = value;
+        else if (name == "--output")
+        {
+            if (value.empty())
+                throw std::invalid_argument("Output filename must not be empty");
+            options.output = value;
+        }
+        else
+        {
+            std::size_t end = 0;
+            if (name == "--aperture" || name == "--shutter")
+            {
+                const double n = std::stod(value, &end);
+                if (end != value.size() || !std::isfinite(n) || n < 0 ||
+                    (name == "--shutter" && n > 1))
+                    throw std::invalid_argument("Invalid value for " + name);
+                if (name == "--aperture") options.aperture = n;
+                else options.shutter = n;
+                continue;
+            }
+            const auto n = std::stoll(value, &end);
+            if (end != value.size() || n < 0)
+                throw std::invalid_argument("Invalid value for " + name);
+            if (name == "--seed") options.seed = std::uint64_t(n);
+            else
+            {
+                if (n > 100000)
+                    throw std::invalid_argument("Value too large for " + name);
+                if (name == "--width") options.width = int(n);
+                else if (name == "--height") { options.height = int(n); explicitHeight = true; }
+                else if (name == "--samples") options.samples = int(n);
+                else if (name == "--depth") options.depth = int(n);
+                else if (name == "--threads") options.threads = int(n);
+                else throw std::invalid_argument("Unknown option: " + name);
+            }
+        }
+    }
+    if (!explicitHeight)
+        options.height = (options.scene == "cornell" || options.scene == "smoke" || options.scene == "final")
+                       ? options.width : std::max(2, options.width * 9 / 16);
+    if (options.width < 2 || options.height < 2 || options.width > 4096 || options.height > 4096 ||
+        options.samples < 1 || options.depth < 1 || options.depth > 256 || options.threads > 256)
+        throw std::invalid_argument("Use dimensions 2..4096, samples 1..100000, depth 1..256, threads 0..256");
+    return options;
 }
 
-void rendering()
+int main(int argc, char** argv)
 {
-	double startFrame = clock();
-
-	printf("CGAssignment3 (built %s at %s) \n", __DATE__, __TIME__);
-	std::cout << "Ray-tracing based rendering launched..." << std::endl;
-
-	// Image
-
-	const int image_width = gWidth;
-	const int image_height = gHeight;
-
-	// Render
-
-	// The main ray-tracing based rendering loop
-	// TODO: finish your own ray-tracing renderer according to the given tutorials
-	for (int j = image_height - 1; j >= 0; j--)
-	{
-		for (int i = 0; i < image_width; i++)
-		{
-			color pixel_color(double(i) / (image_width - 1),
-				double(j) / (image_height - 1), 0.25);
-			write_color(i, j, pixel_color);
-		}
-	}
-
-
-	double endFrame = clock();
-	double timeConsuming = static_cast<double>(endFrame - startFrame) / CLOCKS_PER_SEC;
-	std::cout << "Ray-tracing based rendering over..." << std::endl;
-	std::cout << "The rendering task took " << timeConsuming << " seconds" << std::endl;
+    try
+    {
+        for (int i = 1; i < argc; ++i)
+            if (std::string(argv[i]) == "--help")
+            {
+                usage();
+                return 0;
+            }
+        const auto options = parse(argc, argv);
+        RenderResult result;
+        if (!options.output.empty())
+        {
+            result = render(options);
+            saveImage(options.output, result.canvas);
+        }
+        else
+        {
+            auto app = WindowsApp::getInstance(options.width, options.height, "CGAssignment3: Ray Tracing");
+            if (!app)
+                return 1;
+            Canvas display(options.height, std::vector<color>(options.width));
+            std::mutex canvasMutex;
+            std::atomic<bool> cancel{false};
+            std::atomic<bool> finished{false};
+            std::exception_ptr failure;
+            std::thread worker([&] {
+                try
+                {
+                    result = render(options, [&](int y, const std::vector<color>& row) {
+                        std::lock_guard<std::mutex> lock(canvasMutex);
+                        display[y] = row;
+                    }, &cancel);
+                }
+                catch (...) { failure = std::current_exception(); }
+                finished = true;
+            });
+            while (!app->shouldWindowClose())
+            {
+                app->processEvent();
+                if (finished.load() && failure)
+                    break;
+                {
+                    std::lock_guard<std::mutex> lock(canvasMutex);
+                    app->updateScreenSurface(display);
+                }
+                SDL_Delay(16);
+            }
+            cancel = true;
+            worker.join();
+            if (failure) std::rethrow_exception(failure);
+        }
+        std::cout << std::fixed << std::setprecision(6)
+                  << "{\"scene\":\"" << options.scene << "\",\"width\":" << options.width
+                  << ",\"height\":" << options.height << ",\"samples\":" << options.samples
+                  << ",\"depth\":" << options.depth << ",\"seed\":" << options.seed
+                  << ",\"bvh\":" << (options.bvh ? "true" : "false")
+                  << ",\"objects\":" << result.objects << ",\"build_s\":" << result.buildSeconds
+                  << ",\"render_s\":" << result.renderSeconds << "}\n";
+        return 0;
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
 }
