@@ -36,6 +36,7 @@ Makefile
 *.out
 *.app
 *.dSYM/
+*.zip
 
 # ===== Xcode（CMake 生成 Xcode 工程时）=====
 *.xcodeproj
