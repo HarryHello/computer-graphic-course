@@ -8,7 +8,7 @@
   authors: info.authors,
   date: info.date,
   summary: [
-    动态场景重建需要同时解释多视角图像的外观与场景元素随时间的运动。Dynamic 3D Gaussians 将场景表示为一组具有位置、旋转、颜色和不透明度等属性的三维高斯，通过可微渲染拟合多相机视频，并利用局部刚性、局部旋转一致性和局部等距约束保持跨帧对应。论文在 PanopticSports 数据上的实验同时评估新视角合成及二维、三维点追踪。本文梳理其表示、优化流程和实验结果，讨论多相机采集、首帧可见性等条件对方法的影响，并提出小组实验的复现方案。小组实验结果与成员信息将在实际完成后补充。
+    Dynamic 3D Gaussians 将场景表示为一组随时间移动和旋转的三维高斯，通过可微渲染拟合同步多相机视频，并以局部运动约束保持跨帧对应。本文梳理其场景表示、逐帧优化与追踪方法，分析 PanopticSports 上的新视角合成、点追踪和消融结果。小组使用作者公开的 Juggle 预训练模型，导出了多个帧和视角的彩色图、深度图与前景高斯中心轨迹。定性对照显示，渲染能呈现不同视角下的人物和抛球动作，近景中的面部和衣物细节仍较模糊。本文进一步讨论多相机采集、首帧可见性和真值轨迹数量对方法与评估的限制。
   ],
 )
 
@@ -54,7 +54,7 @@ $ Sigma_(i,t) = R_(i,t) S_i S_i^T R_(i,t)^T. $
 
 此后按时间顺序一次优化一个时刻。新时刻的位置和旋转使用之前的运动趋势进行前向预测，再结合当前多相机图像调整。运动预测提供更接近目标的起点，尤其在运动较快时有助于减少优化落入错误对应关系的机会。论文还为相机引入颜色缩放和偏移，补偿不同设备的曝光、白平衡等差异；这些参数在首帧优化后固定。
 
-论文实验中，首帧使用 27 个训练相机，优化 10,000 次迭代；后续每个时刻优化 2,000 次。作者报告的时间与其运行环境和设置有关，应与最后的渲染帧率分别理解。小组实验如果使用公开预训练模型，观察到的是已优化场景的可视化结果。
+论文实验中，首帧使用 27 个训练相机，优化 10,000 次迭代，后续每个时刻优化 2,000 次。作者报告的时间取决于运行环境与设置。第 5 节的小组实验使用作者公开的预训练模型，考察优化完成后可以导出的图像与轨迹。
 
 == 局部运动约束
 
@@ -112,9 +112,52 @@ $ Sigma_(i,t) = R_(i,t) S_i S_i^T R_(i,t)^T. $
 
 = 小组实验与结果对照
 
-*待完成。* 本节拟运行作者提供的预训练模型，记录实际使用的代码版本、操作系统、GPU、依赖版本、数据或模型来源，以及运行命令。计划选取论文中可对应的场景和时间帧，保存新视角渲染与运动轨迹截图，比较场景内容、遮挡处理与轨迹连续性。运行完成后补充原始截图、对应的论文图号和观察结果。
+== 模型与运行环境
 
-仓库中的作者代码快照为 `7dbbd4dec404308524ff402756bdb8143a2589b0`。作者 README 说明，该代码与论文存在差异：代码使用颜色一致性正则化，而论文描述跨时刻固定颜色；代码还加入地面约束。该版本提供训练和可视化程序，README 将部分评估、原始数据准备和场景编辑代码列为尚未发布。实际复现时应以所用版本为准，并将这些差异写入结果对照 ［5］。
+小组加载了作者提供的 Juggle 预训练参数 `output/pretrained/juggle/params.npz` ［5，6］。结果日志记录了 150 帧、336,568 个高斯，其中 65,641 个标为前景。彩色渲染日志记录的运行环境为 WSL2、NVIDIA GeForce RTX 4060 Laptop GPU、PyTorch 2.1.2+cu118 和 CUDA 11.8。该批次保留背景，抽取第 0、37、75、112、149 帧，每帧用间隔 45° 的八个方位角渲染，共输出 40 张 $640 times 360$ 图像。包内另有第 74 帧的四张彩色图，以及第 0、37、74、112、149 帧的 20 张深度图。日志涵盖上述 40 张彩色图，深度图和轨迹图的导出命令未随包保存。
+
+课程仓库保存的作者主代码快照为 `7dbbd4dec404308524ff402756bdb8143a2589b0`。作者说明该实现使用颜色一致性正则化，并加入地面损失。论文描述的方案则在首帧之后固定颜色。运行日志未记录实际导出脚本和光栅化扩展的提交号，此处以收到的图像和日志为依据进行定性分析。［5，6］
+
+== 多视角彩色与深度渲染
+
+@juggle-renders 按帧号排列彩色和深度图。固定第 0 帧改变方位角时，可以从不同方向看到人物的上身、抬起的手和空中的小球。90° 的深度图能将人物及两个悬空的小球与后方墙面区分开。在同一 90° 视角下，第 0 帧与第 37 帧的手部姿势和小球位置明显不同。第 149 帧的 0° 彩色图中，人物在画面里更大，面部和衣物纹理也更模糊。
+
+#figure(
+  grid(
+    columns: (auto, 1fr, 1fr, 1fr),
+    column-gutter: 5pt,
+    row-gutter: 4pt,
+    align: center + horizon,
+    [], [#text(size: 8pt)[0° 彩色]], [#text(size: 8pt)[90° 彩色]], [#text(size: 8pt)[90° 深度]],
+    [#text(size: 8pt)[0 帧]],
+    image("figures/juggle/juggle_t000_y000_color.png", width: 100%),
+    image("figures/juggle/juggle_t000_y090_color.png", width: 100%),
+    image("figures/juggle/juggle_t000_y090_depth.png", width: 100%),
+    [#text(size: 8pt)[37 帧]],
+    image("figures/juggle/juggle_t037_y000_color.png", width: 100%),
+    image("figures/juggle/juggle_t037_y090_color.png", width: 100%),
+    image("figures/juggle/juggle_t037_y090_depth.png", width: 100%),
+    [#text(size: 8pt)[149 帧]],
+    image("figures/juggle/juggle_t149_y000_color.png", width: 100%),
+    image("figures/juggle/juggle_t149_y090_color.png", width: 100%),
+    image("figures/juggle/juggle_t149_y090_depth.png", width: 100%),
+  ),
+  kind: image,
+  caption: [Juggle 预训练模型的渲染结果。列标为渲染方位角，行标为序列帧号。深度列为渲染结果的灰度可视化。来源为小组实验 ［6］。],
+) <juggle-renders>
+
+原论文图 1 的 Juggle 一列在同一时刻展示两个视角，图中也能看到抛球动作及人物与背景的深度层次。两组结果采用同一场景，但小组图的帧号和方位角尚未与原图逐一对齐，适合比较可见内容和表现形式。［1，图 1］
+
+#block(width: 100%, breakable: false)[
+  == 前景高斯轨迹
+
+  @juggle-trajectories 绘出了第 135 至 149 帧的 1,500 条前景高斯中心轨迹。许多相邻轨迹在这一时间窗口内走向接近，可观察到局部区域的共同位移。论文图 1 将轨迹投影叠加在彩色和深度渲染上，并考虑遮挡。小组的独立三维图用于观察中心的空间位移，无法检验轨迹在图像中的遮挡关系。结果包缺少对应的相机真值图像和标注轨迹，因此本节的对照限于可视化，论文中的画质与追踪误差仍采用第 4 节所引的原文数值。［1，6］
+
+  #figure(
+    image("figures/juggle/juggle_traj_135_149.png", width: 75%),
+    caption: [Juggle 第 135 至 149 帧的前景高斯中心轨迹。每条彩线连接同一高斯在连续帧中的中心位置。原始导出图底部的坐标轴标签有裁切。来源为小组实验 ［6］。],
+  ) <juggle-trajectories>
+]
 
 = 讨论与改进方向
 
@@ -136,9 +179,7 @@ $ Sigma_(i,t) = R_(i,t) S_i S_i^T R_(i,t)^T. $
 
 = 结论
 
-Dynamic 3D Gaussians 将三维高斯从静态场景扩展到动态多视角场景，通过逐帧优化位置与旋转，以及局部刚性、旋转一致性和等距约束，建立渲染与追踪共享的表示。论文实验表明，在所构造的多相机数据集和评估条件下，该方法同时获得较好的新视角质量与长期跟踪结果。它的应用范围仍受到多相机采集、首帧可见性和运动先验的限制。小组将在完成代码运行后，进一步比较公开实现和论文中的可视化结果。
-
-#pagebreak(weak: true)
+Dynamic 3D Gaussians 通过逐帧优化高斯位置与旋转，并施加局部刚性、旋转一致性和等距约束，为渲染与追踪提供了共享的场景表示。论文在 PanopticSports 上报告的主要增益体现在跟踪误差。相较于 3GS-O，平均 PSNR 与 SSIM 提高，平均 LPIPS 从 0.16 增至 0.17。小组在 Juggle 预训练模型上导出了多视角彩色图、深度图及前景高斯中心轨迹。结果呈现了跨视角的人物轮廓和抛球动作，也显示出近景纹理的局限。进一步评估渲染与追踪的精度需要与参考相机和标注轨迹对齐。
 
 = 参考文献
 
@@ -147,6 +188,7 @@ Dynamic 3D Gaussians 将三维高斯从静态场景扩展到动态多视角场�
 + Mildenhall, B., Srinivasan, P. P., Tancik, M., et al. NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis. ECCV, 2020. #link("https://arxiv.org/abs/2003.08934")
 + Harley, A. W., Fang, Z., & Fragkiadaki, K. Particle Video Revisited: Tracking Through Occlusions Using Point Trajectories. ECCV, 2022. #link("https://arxiv.org/abs/2204.04153")
 + Luiten, J., et al. Dynamic3DGaussians 官方代码，提交 7dbbd4dec404308524ff402756bdb8143a2589b0. #link("https://github.com/JonathonLuiten/Dynamic3DGaussians")
++ 小组 Juggle 实验结果包 `results.zip`。包括彩色与深度渲染、彩色批次运行日志 `summary.json` 及前景高斯中心轨迹图。
 
 = 小组分工与贡献
 
